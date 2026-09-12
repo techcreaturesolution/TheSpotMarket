@@ -79,20 +79,7 @@ class MarketService {
     return MarketSnapshot(
       indices: (j['indices'] as List)
           .cast<Map<String, dynamic>>()
-          .map((e) => MarketIndex(
-                name: e['name'] as String,
-                exchange: e['exchange'] as String? ?? 'NSE',
-                last: (e['last'] as num).toDouble(),
-                change: (e['change'] as num).toDouble(),
-                changePct: (e['changePct'] as num).toDouble(),
-                open: (e['open'] as num?)?.toDouble(),
-                high: (e['high'] as num?)?.toDouble(),
-                low: (e['low'] as num?)?.toDouble(),
-                previousClose: (e['previousClose'] as num?)?.toDouble(),
-                sparkline: ((e['sparkline'] as List?) ?? const [])
-                    .map((v) => (v as num).toDouble())
-                    .toList(),
-              ))
+          .map(MarketIndex.fromJson)
           .toList(),
       gainers: _quotes(j['gainers']),
       losers: _quotes(j['losers']),
@@ -103,15 +90,7 @@ class MarketService {
 
   List<StockQuote> _quotes(Object? raw) => ((raw as List?) ?? const [])
       .cast<Map<String, dynamic>>()
-      .map((e) => StockQuote(
-            symbol: e['symbol'] as String,
-            name: e['name'] as String? ?? e['symbol'] as String,
-            lastPrice: (e['lastPrice'] as num).toDouble(),
-            change: (e['change'] as num).toDouble(),
-            changePct: (e['changePct'] as num).toDouble(),
-            volume: (e['volume'] as num?)?.toInt(),
-            sector: e['sector'] as String?,
-          ))
+      .map(StockQuote.fromJson)
       .toList();
 
   Future<void> _ensureNseCookie() async {

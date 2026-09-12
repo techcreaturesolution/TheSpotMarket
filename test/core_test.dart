@@ -42,6 +42,36 @@ void main() {
     });
   });
 
+  group('Stock suggestions', () {
+    test('produces buy for momentum + good news, sell for weakness + bad news', () {
+      final up = const StockQuote(symbol: 'INFY', name: 'Infosys', lastPrice: 1800, change: 40, changePct: 2.2, volume: 9000000, sector: 'IT', sparkline: [1700, 1720, 1750, 1780, 1800]);
+      final down = const StockQuote(symbol: 'HDFCBANK', name: 'HDFC Bank', lastPrice: 1600, change: -30, changePct: -1.9, volume: 9000000, sector: 'Banking', sparkline: [1680, 1660, 1640, 1620, 1600]);
+      final news = [
+        NewsArticle(title: 'Infosys surges on strong guidance, brokerages upgrade', link: 'x', source: 'ET', publishedAt: DateTime.now()),
+        NewsArticle(title: 'HDFC Bank slumps as NPA fears weigh; downgrade by analysts', link: 'y', source: 'ET', publishedAt: DateTime.now()),
+      ];
+      final ideas = AiService.suggestStocks([up, down], news, const Sentiment('Neutral', 0));
+      final bySym = {for (final i in ideas) i.quote.symbol: i};
+      expect(bySym['INFY']!.action, TradeAction.buy);
+      expect(bySym['INFY']!.target, greaterThan(1800));
+      expect(bySym['INFY']!.stopLoss, lessThan(1800));
+      expect(bySym['HDFCBANK']!.action, TradeAction.sell);
+      expect(bySym['HDFCBANK']!.target, lessThan(1600));
+      expect(ideas.first.action, TradeAction.buy);
+      for (final i in ideas) {
+        expect(i.confidence, inInclusiveRange(35, 92));
+        expect(i.reasons, isNotEmpty);
+      }
+    });
+
+    test('global sample universe yields ideas in every bucket', () {
+      final ideas = AiService.suggestStocks(SampleData.globalStocks(), SampleData.globalNews(), const Sentiment('Neutral', 0));
+      expect(ideas.length, SampleData.globalStocks().length);
+      expect(ideas.any((i) => i.action == TradeAction.buy), isTrue);
+      expect(ideas.any((i) => i.action == TradeAction.sell), isTrue);
+    });
+  });
+
   group('RSS parsing', () {
     test('parses items, pubDate and source', () {
       const rss = '''<?xml version="1.0"?>

@@ -97,6 +97,52 @@ class AppConfig {
         'https://www.business-standard.com/rss/markets-106.rss'),
   ];
 
+  static const globalNewsFeeds = <NewsFeed>[
+    NewsFeed('CNBC - World Markets',
+        'https://www.cnbc.com/id/15839069/device/rss/rss.html'),
+    NewsFeed('CNBC - Finance',
+        'https://www.cnbc.com/id/10000664/device/rss/rss.html'),
+    NewsFeed('MarketWatch - Top Stories',
+        'https://feeds.content.dowjones.io/public/rss/mw_topstories'),
+    NewsFeed('MarketWatch - Markets',
+        'https://feeds.content.dowjones.io/public/rss/mw_marketpulse'),
+    NewsFeed('Yahoo Finance',
+        'https://finance.yahoo.com/news/rssindex'),
+    NewsFeed('Investing.com - Stock Markets',
+        'https://www.investing.com/rss/news_25.rss'),
+  ];
+
+  /// Yahoo Finance symbols for the International Market tab.
+  static const globalIndices = <GlobalSymbol>[
+    GlobalSymbol('^GSPC', 'S&P 500', 'USA', '\$'),
+    GlobalSymbol('^DJI', 'Dow Jones', 'USA', '\$'),
+    GlobalSymbol('^IXIC', 'NASDAQ', 'USA', '\$'),
+    GlobalSymbol('^FTSE', 'FTSE 100', 'UK', '£'),
+    GlobalSymbol('^GDAXI', 'DAX', 'Germany', '€'),
+    GlobalSymbol('^N225', 'Nikkei 225', 'Japan', '¥'),
+    GlobalSymbol('^HSI', 'Hang Seng', 'Hong Kong', 'HK\$'),
+    GlobalSymbol('000001.SS', 'Shanghai Composite', 'China', '¥'),
+    GlobalSymbol('^STI', 'Straits Times', 'Singapore', 'S\$'),
+    GlobalSymbol('GC=F', 'Gold', 'Commodity', '\$'),
+    GlobalSymbol('CL=F', 'Crude Oil (WTI)', 'Commodity', '\$'),
+    GlobalSymbol('INR=X', 'USD / INR', 'Forex', '₹'),
+  ];
+
+  static const globalStocks = <GlobalSymbol>[
+    GlobalSymbol('AAPL', 'Apple', 'Technology', '\$'),
+    GlobalSymbol('MSFT', 'Microsoft', 'Technology', '\$'),
+    GlobalSymbol('NVDA', 'NVIDIA', 'Semiconductors', '\$'),
+    GlobalSymbol('GOOGL', 'Alphabet', 'Technology', '\$'),
+    GlobalSymbol('AMZN', 'Amazon', 'Retail', '\$'),
+    GlobalSymbol('META', 'Meta Platforms', 'Technology', '\$'),
+    GlobalSymbol('TSLA', 'Tesla', 'Auto', '\$'),
+    GlobalSymbol('JPM', 'JPMorgan Chase', 'Banking', '\$'),
+    GlobalSymbol('XOM', 'Exxon Mobil', 'Energy', '\$'),
+    GlobalSymbol('NFLX', 'Netflix', 'Media', '\$'),
+    GlobalSymbol('TSM', 'Taiwan Semiconductor', 'Semiconductors', '\$'),
+    GlobalSymbol('BABA', 'Alibaba', 'Retail', '\$'),
+  ];
+
   static const registrars = <Registrar>[
     Registrar(
       'Link Intime (MUFG Intime)',
@@ -137,6 +183,14 @@ class NewsFeed {
   const NewsFeed(this.name, this.url);
   final String name;
   final String url;
+}
+
+class GlobalSymbol {
+  const GlobalSymbol(this.ticker, this.name, this.region, this.currency);
+  final String ticker;
+  final String name;
+  final String region;
+  final String currency;
 }
 
 class Registrar {

@@ -21,14 +21,23 @@ class NewsService {
 
   static final _rfc822 = DateFormat('EEE, dd MMM yyyy HH:mm:ss', 'en_US');
 
-  Future<NewsFeedResult> fetchAll() async {
+  Future<NewsFeedResult> fetchAll() =>
+      fetchFeeds(AppConfig.newsFeeds, fallback: SampleData.news);
+
+  Future<NewsFeedResult> fetchGlobal() =>
+      fetchFeeds(AppConfig.globalNewsFeeds, fallback: SampleData.globalNews);
+
+  Future<NewsFeedResult> fetchFeeds(
+    List<NewsFeed> feeds, {
+    required List<NewsArticle> Function() fallback,
+  }) async {
     final results = await Future.wait(
-      AppConfig.newsFeeds.map(_fetchFeed),
+      feeds.map(_fetchFeed),
       eagerError: false,
     );
     final articles = results.expand((e) => e).toList();
     if (articles.isEmpty) {
-      return NewsFeedResult(articles: SampleData.news(), isLive: false);
+      return NewsFeedResult(articles: fallback(), isLive: false);
     }
     final seen = <String>{};
     final deduped = articles

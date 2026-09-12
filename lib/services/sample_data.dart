@@ -291,4 +291,77 @@ class SampleData {
       ),
     ];
   }
+
+  static List<MarketIndex> globalIndices() => const [
+        MarketIndex(name: 'S&P 500', exchange: 'USA', last: 5842.1, change: 31.2, changePct: 0.54, previousClose: 5810.9, sparkline: [5760, 5788, 5801, 5811, 5842]),
+        MarketIndex(name: 'Dow Jones', exchange: 'USA', last: 42980.5, change: -85.3, changePct: -0.2, previousClose: 43065.8, sparkline: [43120, 43010, 43090, 43066, 42980]),
+        MarketIndex(name: 'NASDAQ', exchange: 'USA', last: 18740.3, change: 188.6, changePct: 1.02, previousClose: 18551.7, sparkline: [18320, 18410, 18490, 18552, 18740]),
+        MarketIndex(name: 'FTSE 100', exchange: 'UK', last: 8265.4, change: 12.7, changePct: 0.15, previousClose: 8252.7, sparkline: [8210, 8240, 8231, 8253, 8265]),
+        MarketIndex(name: 'DAX', exchange: 'Germany', last: 19310.8, change: -64.2, changePct: -0.33, previousClose: 19375.0, sparkline: [19420, 19380, 19410, 19375, 19311]),
+        MarketIndex(name: 'Nikkei 225', exchange: 'Japan', last: 38950.2, change: 412.5, changePct: 1.07, previousClose: 38537.7, sparkline: [38100, 38350, 38420, 38538, 38950]),
+        MarketIndex(name: 'Hang Seng', exchange: 'Hong Kong', last: 20410.6, change: -210.4, changePct: -1.02, previousClose: 20621.0, sparkline: [20850, 20720, 20690, 20621, 20411]),
+        MarketIndex(name: 'Shanghai Composite', exchange: 'China', last: 3312.4, change: 8.1, changePct: 0.25, previousClose: 3304.3, sparkline: [3280, 3295, 3290, 3304, 3312]),
+        MarketIndex(name: 'Gold', exchange: 'Commodity', last: 2685.3, change: 14.8, changePct: 0.55, previousClose: 2670.5, sparkline: [2640, 2652, 2661, 2670, 2685]),
+        MarketIndex(name: 'Crude Oil (WTI)', exchange: 'Commodity', last: 70.42, change: -1.15, changePct: -1.61, previousClose: 71.57, sparkline: [72.4, 72.1, 71.8, 71.57, 70.42]),
+        MarketIndex(name: 'USD / INR', exchange: 'Forex', last: 84.12, change: 0.06, changePct: 0.07, previousClose: 84.06, sparkline: [83.95, 84.01, 84.05, 84.06, 84.12]),
+      ];
+
+  static List<StockQuote> globalStocks() => const [
+        StockQuote(symbol: 'NVDA', name: 'NVIDIA', lastPrice: 138.2, change: 4.6, changePct: 3.44, volume: 245000000, sector: 'Semiconductors', currency: '\$', sparkline: [128, 131, 133.6, 133.6, 138.2]),
+        StockQuote(symbol: 'AAPL', name: 'Apple', lastPrice: 229.5, change: 2.1, changePct: 0.92, volume: 52000000, sector: 'Technology', currency: '\$', sparkline: [225, 226.4, 227.1, 227.4, 229.5]),
+        StockQuote(symbol: 'MSFT', name: 'Microsoft', lastPrice: 418.9, change: 3.4, changePct: 0.82, volume: 21000000, sector: 'Technology', currency: '\$', sparkline: [412, 414, 416.2, 415.5, 418.9]),
+        StockQuote(symbol: 'GOOGL', name: 'Alphabet', lastPrice: 172.6, change: 1.2, changePct: 0.7, volume: 26000000, sector: 'Technology', currency: '\$', sparkline: [168, 169.5, 171, 171.4, 172.6]),
+        StockQuote(symbol: 'AMZN', name: 'Amazon', lastPrice: 189.3, change: -0.8, changePct: -0.42, volume: 38000000, sector: 'Retail', currency: '\$', sparkline: [191, 190.2, 189.8, 190.1, 189.3]),
+        StockQuote(symbol: 'META', name: 'Meta Platforms', lastPrice: 578.4, change: 6.9, changePct: 1.21, volume: 12000000, sector: 'Technology', currency: '\$', sparkline: [560, 565, 569, 571.5, 578.4]),
+        StockQuote(symbol: 'TSLA', name: 'Tesla', lastPrice: 248.7, change: -9.4, changePct: -3.64, volume: 98000000, sector: 'Auto', currency: '\$', sparkline: [262, 259, 255, 258.1, 248.7]),
+        StockQuote(symbol: 'JPM', name: 'JPMorgan Chase', lastPrice: 221.4, change: -2.6, changePct: -1.16, volume: 9000000, sector: 'Banking', currency: '\$', sparkline: [226, 225.1, 224.3, 224.0, 221.4]),
+        StockQuote(symbol: 'XOM', name: 'Exxon Mobil', lastPrice: 117.8, change: -1.9, changePct: -1.59, volume: 15000000, sector: 'Energy', currency: '\$', sparkline: [121, 120.4, 119.9, 119.7, 117.8]),
+        StockQuote(symbol: 'NFLX', name: 'Netflix', lastPrice: 762.1, change: 5.2, changePct: 0.69, volume: 3000000, sector: 'Media', currency: '\$', sparkline: [748, 752, 755, 756.9, 762.1]),
+        StockQuote(symbol: 'TSM', name: 'Taiwan Semiconductor', lastPrice: 196.4, change: 3.8, changePct: 1.97, volume: 11000000, sector: 'Semiconductors', currency: '\$', sparkline: [188, 190, 192.5, 192.6, 196.4]),
+        StockQuote(symbol: 'BABA', name: 'Alibaba', lastPrice: 98.6, change: -2.3, changePct: -2.28, volume: 22000000, sector: 'Retail', currency: '\$', sparkline: [104, 102.5, 101.2, 100.9, 98.6]),
+      ];
+
+  static List<NewsArticle> globalNews() {
+    final now = DateTime.now();
+    return [
+      NewsArticle(
+        title: 'Nasdaq hits record as chipmakers rally on strong AI demand',
+        link: 'https://www.cnbc.com/markets/',
+        source: 'CNBC',
+        publishedAt: now.subtract(const Duration(minutes: 40)),
+        description: 'NVIDIA and TSMC led gains after upbeat data-centre guidance; Treasury yields eased.',
+      ),
+      NewsArticle(
+        title: 'Fed officials signal patience on rate cuts as inflation cools gradually',
+        link: 'https://www.marketwatch.com/',
+        source: 'MarketWatch',
+        publishedAt: now.subtract(const Duration(hours: 2)),
+        description: 'Markets now price two cuts this year; dollar index slips to a two-week low.',
+      ),
+      NewsArticle(
+        title: 'Tesla slides 3% after deliveries miss estimates; analysts cut targets',
+        link: 'https://finance.yahoo.com/',
+        source: 'Yahoo Finance',
+        publishedAt: now.subtract(const Duration(hours: 3)),
+      ),
+      NewsArticle(
+        title: 'Oil falls as OPEC+ weighs output increase; Brent below \$75',
+        link: 'https://www.investing.com/news/',
+        source: 'Investing.com',
+        publishedAt: now.subtract(const Duration(hours: 5)),
+      ),
+      NewsArticle(
+        title: 'Hang Seng drops 1% as China stimulus hopes fade; Alibaba weak',
+        link: 'https://www.cnbc.com/world-markets/',
+        source: 'CNBC',
+        publishedAt: now.subtract(const Duration(hours: 7)),
+      ),
+      NewsArticle(
+        title: 'Nikkei climbs to one-month high on weaker yen and exporter gains',
+        link: 'https://www.marketwatch.com/markets',
+        source: 'MarketWatch',
+        publishedAt: now.subtract(const Duration(hours: 9)),
+      ),
+    ];
+  }
 }

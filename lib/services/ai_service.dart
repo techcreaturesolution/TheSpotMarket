@@ -240,6 +240,113 @@ NII, retail quota, listing gains).''';
         avg > 0.15 ? 'Bullish' : avg < -0.15 ? 'Bearish' : 'Neutral', avg);
   }
 
+  /// Rule-based buy / sell / hold ideas from price momentum, news mentions and
+  /// overall market mood. Purely heuristic; the UI labels it as such.
+  static List<StockSuggestion> suggestStocks(
+    List<StockQuote> universe,
+    List<NewsArticle> news,
+    Sentiment mood,
+  ) {
+    final out = <StockSuggestion>[];
+    for (final q in universe) {
+      final reasons = <String>[];
+      var score = 0.0;
+
+      // Momentum: moderate moves are tradeable, extreme moves look exhausted.
+      final pct = q.changePct;
+      if (pct >= 0.8 && pct <= 4.5) {
+        score += 1.2;
+        reasons.add('Positive momentum (+${pct.toStringAsFixed(2)}% today)');
+      } else if (pct > 4.5) {
+        score -= 0.6;
+        reasons.add('Sharp ${pct.toStringAsFixed(1)}% jump – risk of profit booking');
+      } else if (pct <= -0.8 && pct >= -4.5) {
+        score -= 1.2;
+        reasons.add('Negative momentum (${pct.toStringAsFixed(2)}% today)');
+      } else if (pct < -4.5) {
+        score += 0.4;
+        reasons.add('Oversold after ${pct.toStringAsFixed(1)}% fall – watch for bounce');
+      }
+
+      // Sparkline trend, when available.
+      if (q.sparkline.length >= 4) {
+        final first = q.sparkline.first;
+        final last = q.sparkline.last;
+        final trend = first == 0 ? 0 : (last - first) / first * 100;
+        if (trend > 1) {
+          score += 0.6;
+          reasons.add('Uptrend over recent sessions');
+        } else if (trend < -1) {
+          score -= 0.6;
+          reasons.add('Downtrend over recent sessions');
+        }
+      }
+
+      // News mentioning the company / sector.
+      final keys = <String>{
+        q.symbol.toLowerCase(),
+        q.name.toLowerCase().split(' ').first,
+        if (q.sector != null) q.sector!.toLowerCase(),
+      }.where((k) => k.length > 2);
+      var newsScore = 0.0;
+      var hits = 0;
+      for (final a in news) {
+        final txt = '${a.title} ${a.description ?? ''}'.toLowerCase();
+        if (keys.any(txt.contains)) {
+          newsScore += sentimentOf(txt).score;
+          hits++;
+        }
+      }
+      if (hits > 0) {
+        final avg = newsScore / hits;
+        score += avg * 1.5;
+        reasons.add(avg > 0.1
+            ? 'Positive news flow ($hits headline${hits > 1 ? 's' : ''})'
+            : avg < -0.1
+                ? 'Negative news flow ($hits headline${hits > 1 ? 's' : ''})'
+                : 'Neutral news coverage');
+      }
+
+      // Broad market mood.
+      score += mood.score * 0.8;
+      if (mood.score > 0.15) {
+        reasons.add('Supportive ${mood.label.toLowerCase()} market');
+      } else if (mood.score < -0.15) {
+        reasons.add('Weak ${mood.label.toLowerCase()} market');
+      }
+
+      if (q.volume != null && q.volume! > 5000000) {
+        reasons.add('High traded volume confirms interest');
+        score += score >= 0 ? 0.3 : -0.3;
+      }
+
+      final action = score >= 1.0
+          ? TradeAction.buy
+          : score <= -1.0
+              ? TradeAction.sell
+              : TradeAction.hold;
+      final confidence = (50 + score.abs() * 15).clamp(35, 92).round();
+      final swing = (q.lastPrice * (0.03 + pct.abs().clamp(0, 5) / 100));
+      final target = action == TradeAction.sell ? q.lastPrice - swing : q.lastPrice + swing;
+      final stop = action == TradeAction.sell ? q.lastPrice + swing / 2 : q.lastPrice - swing / 2;
+
+      out.add(StockSuggestion(
+        quote: q,
+        action: action,
+        confidence: confidence,
+        reasons: reasons.isEmpty ? ['No strong signal – wait for confirmation'] : reasons,
+        target: double.parse(target.toStringAsFixed(2)),
+        stopLoss: double.parse(stop.toStringAsFixed(2)),
+      ));
+    }
+    out.sort((a, b) {
+      final order = {TradeAction.buy: 0, TradeAction.sell: 1, TradeAction.hold: 2};
+      final c = order[a.action]!.compareTo(order[b.action]!);
+      return c != 0 ? c : b.confidence.compareTo(a.confidence);
+    });
+    return out;
+  }
+
   /// One-paragraph market brief built from live data (LLM if available).
   Future<String> marketBrief(
       List<MarketIndex> idx, List<NewsArticle> news) async {

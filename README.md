@@ -10,6 +10,8 @@ AI insights (SpotAI) and Google AdMob monetisation.
 | --- | --- |
 | IPOs | Open / upcoming / closed / listed tabs, mainboard & SME, subscription (QIB/NII/Retail), GMP & expected listing gain, AI score (0–100) with reasons, watchlist |
 | Market | NIFTY 50, SENSEX, BANK NIFTY etc. with sparklines, top gainers/losers, live NSE data with sample fallback |
+| Buy / Sell ideas | SpotAI BUY / SELL / HOLD tags for Indian large caps (dashboard + Market tab) with target, stop-loss, confidence and reasons, scored from momentum, 5-day trend, headline sentiment, market mood and volume |
+| International Market | New *Global* tab: S&P 500, Dow, NASDAQ, FTSE, DAX, Nikkei, Hang Seng, Shanghai, Gold, Crude, USD/INR + world stocks (Yahoo Finance public data, sample fallback), global buy/sell ideas and international news (CNBC, MarketWatch, Yahoo Finance, Investing.com) |
 | News | Aggregated RSS from Economic Times, Moneycontrol, Livemint, Business Standard; search, category filter, bullish/bearish sentiment tag |
 | Allotment | Save PAN of family/friends (stored on-device), pick an IPO, auto-check via your backend or open the registrar site with PAN pre-filled and record the result per person |
 | SpotAI | Chat assistant (Gemini or OpenAI, or offline heuristic mode), daily AI market brief, IPO scoring, headline sentiment |
@@ -88,6 +90,7 @@ Pass `--dart-define=BACKEND_URL=https://api.example.com` and implement:
 | --- | --- |
 | `GET /ipos` | `[Ipo, ...]` (see `lib/models/models.dart → Ipo.fromJson`) |
 | `GET /market/snapshot` | `{ "indices": [...], "gainers": [...], "losers": [...] }` |
+| `GET /global/snapshot` | `{ "indices": [...], "stocks": [...] }` – stocks may include `currency` and `sparkline` |
 | `POST /allotment` `{ "ipoId", "pans": ["ABCDE1234F"] }` | `{ "results": [{ "pan", "outcome": "allotted\|not_allotted\|unknown", "shares", "message" }] }` |
 
 If no backend is configured, PANs never leave the device.
