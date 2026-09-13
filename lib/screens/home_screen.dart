@@ -10,10 +10,12 @@ import '../widgets/common.dart';
 import 'ai_chat_screen.dart';
 import 'allotment_screen.dart';
 import 'auth_screen.dart';
+import 'global_market_screen.dart';
 import 'ipo_screens.dart';
 import 'market_screen.dart';
 import 'news_screen.dart';
 import 'settings_screen.dart';
+import 'suggestions_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -31,6 +33,7 @@ class _HomeShellState extends State<HomeShell> {
     DashboardScreen(),
     IpoListScreen(),
     MarketScreen(),
+    GlobalMarketScreen(),
     NewsScreen(),
     AllotmentScreen(),
   ];
@@ -62,6 +65,7 @@ class _HomeShellState extends State<HomeShell> {
               NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
               NavigationDestination(icon: Icon(Icons.rocket_launch_outlined), selectedIcon: Icon(Icons.rocket_launch), label: 'IPOs'),
               NavigationDestination(icon: Icon(Icons.show_chart), label: 'Market'),
+              NavigationDestination(icon: Icon(Icons.public_outlined), selectedIcon: Icon(Icons.public), label: 'Global'),
               NavigationDestination(icon: Icon(Icons.newspaper_outlined), selectedIcon: Icon(Icons.newspaper), label: 'News'),
               NavigationDestination(icon: Icon(Icons.fact_check_outlined), selectedIcon: Icon(Icons.fact_check), label: 'Allotment'),
             ],
@@ -112,6 +116,11 @@ class DashboardScreen extends StatelessWidget {
           children: [
             _IndexStrip(indices: s.indices, loading: s.marketLoading),
             _AiBriefCard(mood: mood),
+            SuggestionStrip(
+              items: s.stockSuggestions,
+              onSeeAll: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SuggestionsScreen())),
+            ),
             SectionHeader('Open IPOs (${open.length})',
                 action: 'See all', onAction: () => _goto(context, 1)),
             if (s.ipoLoading && s.ipos.isEmpty)
@@ -142,7 +151,7 @@ class DashboardScreen extends StatelessWidget {
               SectionHeader('Top Losers'),
               ...s.snapshot!.losers.take(3).map((q) => StockTile(quote: q)),
             ],
-            SectionHeader('Latest News', action: 'More', onAction: () => _goto(context, 3)),
+            SectionHeader('Latest News', action: 'More', onAction: () => _goto(context, 4)),
             ...s.news.take(4).map((a) => NewsTile(article: a, compact: true)),
             const SizedBox(height: 8),
             const Padding(

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import '../services/ai_service.dart';
 import '../services/allotment_service.dart';
+import '../services/global_market_service.dart';
 import '../services/ipo_service.dart';
 import '../services/market_service.dart';
 import '../services/news_service.dart';
@@ -16,7 +17,9 @@ class AppState extends ChangeNotifier {
     NewsService? news,
     AllotmentService? allotment,
     AiService? ai,
+    GlobalMarketService? global,
   })  : _market = market ?? MarketService(),
+        _global = global ?? GlobalMarketService(),
         _ipo = ipo ?? IpoService(),
         _news = news ?? NewsService(),
         allotmentService = allotment ?? AllotmentService(),
@@ -34,6 +37,7 @@ class AppState extends ChangeNotifier {
 
   final StorageService storage;
   final MarketService _market;
+  final GlobalMarketService _global;
   final IpoService _ipo;
   final NewsService _news;
   final AllotmentService allotmentService;
@@ -100,8 +104,46 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // -------------------------------------------------------- global market
+  GlobalSnapshot? _globalSnapshot;
+  NewsFeedResult? _globalNews;
+  bool _globalLoading = false;
+
+  GlobalSnapshot? get globalSnapshot => _globalSnapshot;
+  List<MarketIndex> get globalIndices => _globalSnapshot?.indices ?? const [];
+  List<StockQuote> get globalStocks => _globalSnapshot?.stocks ?? const [];
+  List<NewsArticle> get globalNews => _globalNews?.articles ?? const [];
+  bool get globalNewsIsLive => _globalNews?.isLive ?? false;
+  bool get globalLoading => _globalLoading;
+
+  Future<void> loadGlobal() async {
+    _globalLoading = true;
+    notifyListeners();
+    final (snap, feed) = await (_global.fetchSnapshot(), _news.fetchGlobal()).wait;
+    _globalSnapshot = snap;
+    _globalNews = feed;
+    _globalLoading = false;
+    notifyListeners();
+  }
+
+  Sentiment get globalMood => AiService.marketMood(globalNews, globalIndices);
+
+  // -------------------------------------------------------- suggestions
+  /// Buy / sell / hold ideas for Indian large caps (gainers + losers universe).
+  List<StockSuggestion> get stockSuggestions {
+    final snap = _snapshot;
+    if (snap == null) return const [];
+    final universe = <String, StockQuote>{
+      for (final q in [...snap.gainers, ...snap.losers]) q.symbol: q,
+    };
+    return AiService.suggestStocks(universe.values.toList(), news, marketMood);
+  }
+
+  List<StockSuggestion> get globalSuggestions =>
+      AiService.suggestStocks(globalStocks, globalNews, globalMood);
+
   Future<void> refreshAll() =>
-      Future.wait([loadMarket(), loadIpos(), loadNews()]);
+      Future.wait([loadMarket(), loadIpos(), loadNews(), loadGlobal()]);
 
   // ---------------------------------------------------------------- AI brief
   String? _brief;

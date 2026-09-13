@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../providers/app_state.dart';
 import '../widgets/common.dart';
+import 'suggestions_screen.dart';
 
 class MarketScreen extends StatelessWidget {
   const MarketScreen({super.key});
@@ -55,6 +56,12 @@ class MarketScreen extends StatelessWidget {
                   ),
                   const SectionHeader('NSE & BSE Indices'),
                   ...snap.indices.map((i) => _IndexTile(index: i)),
+                  SuggestionStrip(
+                    title: 'Which share to buy / sell today',
+                    items: s.stockSuggestions,
+                    onSeeAll: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const SuggestionsScreen())),
+                  ),
                   const SectionHeader('Top Gainers (Nifty 50)'),
                   ...snap.gainers.map((q) => StockTile(quote: q)),
                   const NativeAdCard(),
@@ -154,7 +161,7 @@ class StockTile extends StatelessWidget {
       title: Text(quote.symbol, style: const TextStyle(fontWeight: FontWeight.w700)),
       subtitle: Text(quote.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-        Text(inr2.format(quote.lastPrice), style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(priceFmt(quote), style: const TextStyle(fontWeight: FontWeight.w700)),
         Text('${quote.isUp ? '+' : ''}${quote.changePct.toStringAsFixed(2)}%',
             style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12)),
       ]),

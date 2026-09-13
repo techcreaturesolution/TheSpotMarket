@@ -143,6 +143,21 @@ class MarketIndex {
 
   bool get isUp => change >= 0;
 
+  factory MarketIndex.fromJson(Map<String, dynamic> e) => MarketIndex(
+        name: e['name'] as String,
+        exchange: e['exchange'] as String? ?? 'NSE',
+        last: (e['last'] as num).toDouble(),
+        change: (e['change'] as num).toDouble(),
+        changePct: (e['changePct'] as num).toDouble(),
+        open: (e['open'] as num?)?.toDouble(),
+        high: (e['high'] as num?)?.toDouble(),
+        low: (e['low'] as num?)?.toDouble(),
+        previousClose: (e['previousClose'] as num?)?.toDouble(),
+        sparkline: ((e['sparkline'] as List?) ?? const [])
+            .map((v) => (v as num).toDouble())
+            .toList(),
+      );
+
   factory MarketIndex.fromNse(Map<String, dynamic> j) {
     final last = (j['last'] as num).toDouble();
     final change = (j['variation'] as num).toDouble();
@@ -169,6 +184,8 @@ class StockQuote {
     required this.changePct,
     this.volume,
     this.sector,
+    this.currency = '₹',
+    this.sparkline = const [],
   });
 
   final String symbol;
@@ -178,8 +195,24 @@ class StockQuote {
   final double changePct;
   final int? volume;
   final String? sector;
+  final String currency;
+  final List<double> sparkline;
 
   bool get isUp => change >= 0;
+
+  factory StockQuote.fromJson(Map<String, dynamic> e) => StockQuote(
+        symbol: e['symbol'] as String,
+        name: e['name'] as String? ?? e['symbol'] as String,
+        lastPrice: (e['lastPrice'] as num).toDouble(),
+        change: (e['change'] as num).toDouble(),
+        changePct: (e['changePct'] as num).toDouble(),
+        volume: (e['volume'] as num?)?.toInt(),
+        sector: e['sector'] as String?,
+        currency: e['currency'] as String? ?? '₹',
+        sparkline: ((e['sparkline'] as List?) ?? const [])
+            .map((v) => (v as num).toDouble())
+            .toList(),
+      );
 
   factory StockQuote.fromNse(Map<String, dynamic> j) => StockQuote(
         symbol: j['symbol'] as String,
@@ -191,6 +224,45 @@ class StockQuote {
         volume: (j['totalTradedVolume'] as num?)?.toInt(),
         sector: (j['meta'] as Map<String, dynamic>?)?['industry'] as String?,
       );
+}
+
+enum TradeAction { buy, sell, hold }
+
+extension TradeActionX on TradeAction {
+  String get label => switch (this) {
+        TradeAction.buy => 'BUY',
+        TradeAction.sell => 'SELL',
+        TradeAction.hold => 'HOLD',
+      };
+
+  Color get color => switch (this) {
+        TradeAction.buy => Colors.green,
+        TradeAction.sell => Colors.red,
+        TradeAction.hold => Colors.orange,
+      };
+}
+
+/// AI-derived trade idea for a stock. Informational only, not investment advice.
+class StockSuggestion {
+  const StockSuggestion({
+    required this.quote,
+    required this.action,
+    required this.confidence,
+    required this.reasons,
+    required this.target,
+    required this.stopLoss,
+    this.horizon = 'Short term (1–2 weeks)',
+  });
+
+  final StockQuote quote;
+  final TradeAction action;
+
+  /// 0–100
+  final int confidence;
+  final List<String> reasons;
+  final double target;
+  final double stopLoss;
+  final String horizon;
 }
 
 class NewsArticle {
