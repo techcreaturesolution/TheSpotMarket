@@ -14,7 +14,7 @@ class AppConfig {
   /// (e.g. a small Node/Python API you host). When empty the app falls back
   /// to public sources and bundled sample data.
   static const backendBaseUrl =
-      String.fromEnvironment('BACKEND_URL', defaultValue: '');
+      String.fromEnvironment('BACKEND_URL', defaultValue: 'http://127.0.0.1:3000');
 
   /// AI provider. Supported: `gemini` (default) or `openai`.
   static const aiProvider =

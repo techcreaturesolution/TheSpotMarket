@@ -36,43 +36,60 @@ class AllotmentService {
               ))
           .toList();
     }
-    final res = await _client
-        .post(
-          Uri.parse('${AppConfig.backendBaseUrl}/allotment'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'ipoId': ipo.id,
-            'ipoName': ipo.name,
-            'registrar': ipo.registrar,
-            'pans': profiles.map((p) => p.pan).toList(),
-          }),
-        )
-        .timeout(const Duration(seconds: 60));
-    if (res.statusCode != 200) {
-      throw Exception('Allotment service returned ${res.statusCode}');
+    try {
+      final res = await _client
+          .post(
+            Uri.parse('${AppConfig.backendBaseUrl}/allotment'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'ipoId': ipo.id,
+              'ipoName': ipo.name,
+              'registrar': ipo.registrar,
+              'pans': profiles.map((p) => p.pan).toList(),
+            }),
+          )
+          .timeout(const Duration(seconds: 60));
+      if (res.statusCode != 200) {
+        throw Exception('Allotment service returned HTTP ${res.statusCode}');
+      }
+      final dynamic body = jsonDecode(res.body);
+      final byPan = <String, Map<String, dynamic>>{};
+      if (body is Map<String, dynamic> && body['results'] is List) {
+        for (final item in (body['results'] as List).whereType<Map<String, dynamic>>()) {
+          final pan = (item['pan'] ?? '').toString().toUpperCase();
+          if (pan.isNotEmpty) {
+            byPan[pan] = item;
+          }
+        }
+      }
+      return profiles.map((p) {
+        final r = byPan[p.pan.toUpperCase()];
+        final status = (r?['status'] as String? ?? 'unknown').toLowerCase();
+        return AllotmentResult(
+          profileId: p.id,
+          ipoId: ipo.id,
+          outcome: switch (status) {
+            'allotted' => AllotmentOutcome.allotted,
+            'not_allotted' || 'notallotted' => AllotmentOutcome.notAllotted,
+            'pending' => AllotmentOutcome.pending,
+            _ => AllotmentOutcome.unknown,
+          },
+          sharesAllotted: (r?['shares'] as num?)?.toInt(),
+          note: r?['message']?.toString() ?? r?['note']?.toString(),
+          checkedAt: DateTime.now(),
+        );
+      }).toList();
+    } catch (e) {
+      return profiles
+          .map((p) => AllotmentResult(
+                profileId: p.id,
+                ipoId: ipo.id,
+                outcome: AllotmentOutcome.unknown,
+                checkedAt: DateTime.now(),
+                note: 'Automatic check failed: ${e.toString()}',
+              ))
+          .toList();
     }
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
-    final byPan = <String, Map<String, dynamic>>{
-      for (final r in (body['results'] as List).cast<Map<String, dynamic>>())
-        (r['pan'] as String).toUpperCase(): r,
-    };
-    return profiles.map((p) {
-      final r = byPan[p.pan.toUpperCase()];
-      final status = (r?['status'] as String? ?? 'unknown').toLowerCase();
-      return AllotmentResult(
-        profileId: p.id,
-        ipoId: ipo.id,
-        outcome: switch (status) {
-          'allotted' => AllotmentOutcome.allotted,
-          'not_allotted' || 'notallotted' => AllotmentOutcome.notAllotted,
-          'pending' => AllotmentOutcome.pending,
-          _ => AllotmentOutcome.unknown,
-        },
-        sharesAllotted: (r?['shares'] as num?)?.toInt(),
-        note: r?['message'] as String?,
-        checkedAt: DateTime.now(),
-      );
-    }).toList();
   }
 
   /// Best-effort JS that fills the first PAN-looking input on a registrar page.

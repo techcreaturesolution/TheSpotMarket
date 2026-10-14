@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../providers/app_state.dart';
+import '../services/ai_service.dart';
+import '../services/global_market_service.dart';
 import '../widgets/common.dart';
 import 'market_screen.dart';
 import 'news_screen.dart';
@@ -16,7 +18,11 @@ class GlobalMarketScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
+    // Only watch global-related state, not market indices that tick every second.
+    final isLive = context.select<AppState, bool>((s) => s.globalSnapshot?.isLive ?? false);
+    final hasSnap = context.select<AppState, bool>((s) => s.globalSnapshot != null);
+    final globalLoading = context.select<AppState, bool>((s) => s.globalLoading && s.globalSnapshot == null);
+    final loadGlobal = context.read<AppState>().loadGlobal;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -24,16 +30,16 @@ class GlobalMarketScreen extends StatelessWidget {
           title: Row(children: [
             const Text('International Market'),
             const SizedBox(width: 8),
-            if (s.globalSnapshot != null) LiveBadge(live: s.globalSnapshot!.isLive),
+            if (hasSnap) LiveBadge(live: isLive),
           ]),
-          actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: s.loadGlobal)],
+          actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: loadGlobal)],
           bottom: const TabBar(tabs: [
             Tab(text: 'Indices'),
             Tab(text: 'Buy / Sell'),
             Tab(text: 'News'),
           ]),
         ),
-        body: s.globalLoading && s.globalSnapshot == null
+        body: globalLoading
             ? const Center(child: CircularProgressIndicator())
             : const TabBarView(children: [
                 _GlobalIndicesTab(),
@@ -45,15 +51,57 @@ class GlobalMarketScreen extends StatelessWidget {
   }
 }
 
-class _GlobalIndicesTab extends StatelessWidget {
+class _GlobalIndicesTab extends StatefulWidget {
   const _GlobalIndicesTab();
 
   @override
+  State<_GlobalIndicesTab> createState() => _GlobalIndicesTabState();
+}
+
+class _GlobalIndicesTabState extends State<_GlobalIndicesTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    final snap = s.globalSnapshot;
+    super.build(context);
+    // Only watch global snapshot data — avoids rebuilding on NSE market ticks.
+    final snap = context.select<AppState, GlobalSnapshot?>((s) => s.globalSnapshot);
+    final globalIndices = context.select<AppState, List<MarketIndex>>((s) => s.globalIndices);
+    final globalStocks = context.select<AppState, List<StockQuote>>((s) => s.globalStocks);
+    final globalMood = context.select<AppState, Sentiment>((s) => s.globalMood);
+    final globalLoading = context.select<AppState, bool>((s) => s.globalLoading);
+    final isInitialLoading = context.select<AppState, bool>((s) => s.isInitialLoading);
+    final loadGlobal = context.read<AppState>().loadGlobal;
+
+    if (globalIndices.isEmpty && (globalLoading || isInitialLoading)) {
+      return RefreshIndicator(
+        onRefresh: loadGlobal,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 96),
+          children: const [
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: ShimmerBox(width: 140, height: 18, borderRadius: 4),
+            ),
+            StockTileSkeleton(),
+            StockTileSkeleton(),
+            StockTileSkeleton(),
+            StockTileSkeleton(),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: ShimmerBox(width: 120, height: 18, borderRadius: 4),
+            ),
+            StockTileSkeleton(),
+            StockTileSkeleton(),
+          ],
+        ),
+      );
+    }
+
     final groups = <String, List<MarketIndex>>{};
-    for (final i in s.globalIndices) {
+    for (final i in globalIndices) {
       final g = switch (i.exchange) {
         'Commodity' => 'Commodities',
         'Forex' => 'Currency',
@@ -64,7 +112,7 @@ class _GlobalIndicesTab extends StatelessWidget {
       groups.putIfAbsent(g, () => []).add(i);
     }
     return RefreshIndicator(
-      onRefresh: s.loadGlobal,
+      onRefresh: loadGlobal,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 96),
         children: [
@@ -72,7 +120,7 @@ class _GlobalIndicesTab extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(children: [
               const Text('Global mood: ', style: TextStyle(fontWeight: FontWeight.w600)),
-              SentimentChip(s.globalMood),
+              SentimentChip(globalMood),
               const Spacer(),
               if (snap != null)
                 Text('Updated ${DateFormat.jm().format(snap.fetchedAt)}',
@@ -85,7 +133,7 @@ class _GlobalIndicesTab extends StatelessWidget {
             if (e.key == 'United States') const NativeAdCard(),
           ],
           const SectionHeader('World Stocks'),
-          ...s.globalStocks.map((q) => StockTile(quote: q)),
+          ...globalStocks.map((q) => StockTile(quote: q)),
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -109,43 +157,47 @@ class _GlobalIndexTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = gainColor(context, index.isUp);
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(index.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text(index.exchange, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline)),
-            ]),
-          ),
-          if (index.sparkline.isNotEmpty)
-            SizedBox(width: 80, child: Sparkline(index.sparkline, up: index.isUp, height: 28)),
-          const SizedBox(width: 12),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(num2.format(index.last), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-            Text(
-              '${index.isUp ? '+' : ''}${num2.format(index.change)} (${index.isUp ? '+' : ''}${index.changePct.toStringAsFixed(2)}%)',
-              style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12),
-            ),
-          ]),
-        ]),
-      ),
+    final stats = <(String, String)>[
+      if (index.open != null) ('Open', num2.format(index.open)),
+      if (index.high != null) ('High', num2.format(index.high)),
+      if (index.low != null) ('Low', num2.format(index.low)),
+      if (index.previousClose != null) ('Prev Close', num2.format(index.previousClose)),
+    ];
+
+    return DetailedChartCard(
+      title: index.name,
+      subtitle: index.exchange,
+      value: num2.format(index.last),
+      changePct: index.changePct,
+      change: index.change,
+      points: index.sparkline.isNotEmpty
+          ? index.sparkline
+          : [index.previousClose ?? index.last * 0.98, index.last],
+      labels: const ['AUG 1', 'AUG 6', 'AUG 12'],
+      stats: stats,
     );
   }
 }
 
-class _GlobalIdeasTab extends StatelessWidget {
+class _GlobalIdeasTab extends StatefulWidget {
   const _GlobalIdeasTab();
 
   @override
+  State<_GlobalIdeasTab> createState() => _GlobalIdeasTabState();
+}
+
+class _GlobalIdeasTabState extends State<_GlobalIdeasTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    final items = s.globalSuggestions;
+    super.build(context);
+    final items = context.select<AppState, List<StockSuggestion>>((s) => s.globalSuggestions);
+    final loadGlobal = context.read<AppState>().loadGlobal;
     return RefreshIndicator(
-      onRefresh: s.loadGlobal,
+      onRefresh: loadGlobal,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 96),
         children: [
@@ -163,27 +215,37 @@ class _GlobalIdeasTab extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(12),
               child: OutlinedButton.icon(
-                onPressed: () => Navigator.push(context,
+                 onPressed: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const SuggestionsScreen(global: true))),
                 icon: const Icon(Icons.filter_list),
                 label: const Text('Filter Buy / Sell / Hold'),
               ),
-            ),
+           ),
         ],
-      ),
+       ),
     );
   }
 }
 
-class _GlobalNewsTab extends StatelessWidget {
+class _GlobalNewsTab extends StatefulWidget { 
   const _GlobalNewsTab();
 
   @override
+  State<_GlobalNewsTab> createState() => _GlobalNewsTabState();
+}
+
+class _GlobalNewsTabState extends State<_GlobalNewsTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    final items = s.globalNews;
+    super.build(context);
+    final items = context.select<AppState, List<NewsArticle>>((s) => s.globalNews);
+    final loadGlobal = context.read<AppState>().loadGlobal;
     return RefreshIndicator(
-      onRefresh: s.loadGlobal,
+      onRefresh: loadGlobal,
       child: items.isEmpty
           ? ListView(children: const [
               SizedBox(height: 120),

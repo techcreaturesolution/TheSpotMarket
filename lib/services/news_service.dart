@@ -39,11 +39,17 @@ class NewsService {
     if (articles.isEmpty) {
       return NewsFeedResult(articles: fallback(), isLive: false);
     }
-    final seen = <String>{};
-    final deduped = articles
-        .where((a) => seen.add(a.title.toLowerCase().trim()))
-        .toList()
-      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+    final seenKeys = <String>{};
+    final deduped = <NewsArticle>[];
+    for (final a in articles) {
+      final key = a.link.trim().isNotEmpty
+          ? a.link.trim().toLowerCase()
+          : '${a.source.toLowerCase().trim()}|${a.title.toLowerCase().trim()}';
+      if (seenKeys.add(key)) {
+        deduped.add(a);
+      }
+    }
+    deduped.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
     return NewsFeedResult(articles: deduped, isLive: true);
   }
 
@@ -61,35 +67,67 @@ class NewsService {
   }
 
   static List<NewsArticle> parseRss(String body, String sourceName) {
-    final doc = XmlDocument.parse(body);
-    return doc.findAllElements('item').map((item) {
-      String text(String tag) =>
-          item.getElement(tag)?.innerText.trim() ?? '';
-      final title = _stripHtml(text('title'));
-      if (title.isEmpty) return null;
-      final desc = _stripHtml(text('description'));
-      final image = item.getElement('media:content')?.getAttribute('url') ??
-          item.getElement('media:thumbnail')?.getAttribute('url') ??
-          item.getElement('enclosure')?.getAttribute('url') ??
-          _firstImg(text('description'));
-      return NewsArticle(
-        title: title,
-        link: text('link').isNotEmpty ? text('link') : text('guid'),
-        source: sourceName.split(' - ').first,
-        publishedAt: _parseDate(text('pubDate')),
-        description: desc.isEmpty ? null : desc,
-        imageUrl: image,
-      );
-    }).whereType<NewsArticle>().toList();
+    try {
+      final doc = XmlDocument.parse(body);
+      Iterable<XmlElement> items = doc.findAllElements('item');
+      if (items.isEmpty) {
+        items = doc.findAllElements('entry');
+      }
+      return items.map((item) {
+        String text(String tag) {
+          final el = item.findElements(tag).firstOrNull;
+          return el?.innerText.trim() ?? '';
+        }
+
+        final title = _stripHtml(text('title'));
+        if (title.isEmpty) return null;
+
+        final desc = _stripHtml(text('description').isNotEmpty
+            ? text('description')
+            : (text('summary').isNotEmpty ? text('summary') : text('content')));
+
+        final linkEl = item.findElements('link').firstOrNull;
+        String link = linkEl?.getAttribute('href') ?? linkEl?.innerText.trim() ?? '';
+        if (link.isEmpty) {
+          link = text('guid').isNotEmpty ? text('guid') : text('id');
+        }
+
+        final image = item.findElements('media:content').firstOrNull?.getAttribute('url') ??
+            item.findElements('media:thumbnail').firstOrNull?.getAttribute('url') ??
+            item.findElements('enclosure').firstOrNull?.getAttribute('url') ??
+            _firstImg(text('description')) ??
+            _firstImg(text('content'));
+
+        final rawDate = text('pubDate').isNotEmpty
+            ? text('pubDate')
+            : (text('dc:date').isNotEmpty
+                ? text('dc:date')
+                : (text('published').isNotEmpty
+                    ? text('published')
+                    : (text('updated').isNotEmpty ? text('updated') : text('date'))));
+
+        return NewsArticle(
+          title: title,
+          link: link,
+          source: sourceName.split(' - ').first,
+          publishedAt: _parseDate(rawDate),
+          description: desc.isEmpty ? null : desc,
+          imageUrl: image,
+        );
+      }).whereType<NewsArticle>().toList();
+    } catch (_) {
+      return const [];
+    }
   }
 
   static DateTime _parseDate(String raw) {
-    if (raw.isEmpty) return DateTime.now();
+    if (raw.trim().isEmpty) return DateTime.now();
     try {
-      return DateTime.parse(raw);
+      final dt = DateTime.tryParse(raw.trim());
+      if (dt != null) return dt;
     } catch (_) {}
     try {
-      final cleaned = raw.replaceAll(RegExp(r'\s+(GMT|UTC|IST|[+-]\d{4})$'), '');
+      final cleaned = raw.trim().replaceAll(RegExp(r'\s+(GMT|UTC|IST|EST|EDT|PST|PDT|CST|CDT|[+-]\d{4})$'), '');
       final dt = _rfc822.parseUtc(cleaned);
       final tz = RegExp(r'([+-])(\d{2})(\d{2})$').firstMatch(raw);
       if (tz != null) {
@@ -98,7 +136,7 @@ class NewsService {
             hours: int.parse(tz.group(2)!), minutes: int.parse(tz.group(3)!));
         return dt.subtract(off * sign).toLocal();
       }
-      if (raw.endsWith('IST')) {
+      if (raw.contains('IST')) {
         return dt.subtract(const Duration(hours: 5, minutes: 30)).toLocal();
       }
       return dt.toLocal();
@@ -113,7 +151,17 @@ class NewsService {
       .replaceAll('&amp;', '&')
       .replaceAll('&quot;', '"')
       .replaceAll('&#39;', "'")
+      .replaceAll('&apos;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
       .replaceAll('&nbsp;', ' ')
+      .replaceAll('&#8217;', "'")
+      .replaceAll('&#8220;', '"')
+      .replaceAll('&#8221;', '"')
+      .replaceAll('&#8211;', '-')
+      .replaceAll('&#8212;', '—')
+      .replaceAll('&mdash;', '—')
+      .replaceAll('&ndash;', '-')
       .trim();
 
   static String? _firstImg(String html) =>

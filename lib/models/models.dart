@@ -1,5 +1,70 @@
 import 'package:flutter/material.dart';
 
+double _numToDouble(dynamic v) {
+  if (v is num) {
+    final d = v.toDouble();
+    return (d.isNaN || d.isInfinite) ? 0.0 : d;
+  }
+  if (v is String) {
+    final clean = v.replaceAll(',', '').trim();
+    final d = double.tryParse(clean) ?? 0.0;
+    return (d.isNaN || d.isInfinite) ? 0.0 : d;
+  }
+  return 0.0;
+}
+
+double? _numToNullableDouble(dynamic v) {
+  if (v == null) return null;
+  if (v is num) {
+    final d = v.toDouble();
+    return (d.isNaN || d.isInfinite) ? null : d;
+  }
+  if (v is String) {
+    final clean = v.replaceAll(',', '').trim();
+    final d = double.tryParse(clean);
+    if (d == null || d.isNaN || d.isInfinite) return null;
+    return d;
+  }
+  return null;
+}
+
+
+
+int? _numToNullableInt(dynamic v) {
+  if (v == null) return null;
+  if (v is num) {
+    if (v.isNaN || v.isInfinite) return null;
+    return v.toInt();
+  }
+  if (v is String) {
+    final clean = v.replaceAll(',', '').trim();
+    return int.tryParse(clean);
+  }
+  return null;
+}
+
+enum MarketDataSource {
+  nse,
+  backend,
+  yahoo,
+  sampleFallback,
+  unknown,
+  indianApi,
+}
+
+extension MarketDataSourceX on MarketDataSource {
+  String get label => switch (this) {
+        MarketDataSource.nse => 'NSE LIVE',
+        MarketDataSource.backend => 'BACKEND',
+        MarketDataSource.yahoo => 'YAHOO',
+        MarketDataSource.indianApi => 'IndianAPI',
+        MarketDataSource.sampleFallback => 'DEMO DATA',
+        MarketDataSource.unknown => 'UNKNOWN',
+      };
+
+  bool get isRealMarket => this == MarketDataSource.nse || this == MarketDataSource.backend;
+}
+
 enum IpoStatus { upcoming, open, closed, listed }
 
 extension IpoStatusX on IpoStatus {
@@ -25,13 +90,14 @@ class Ipo {
     required this.symbol,
     required this.exchange,
     required this.sector,
-    required this.openDate,
-    required this.closeDate,
-    required this.allotmentDate,
-    required this.listingDate,
+    this.openDate,
+    this.closeDate,
+    this.allotmentDate,
+    this.listingDate,
     required this.priceMin,
     required this.priceMax,
-    required this.lotSize,
+    this.issuePrice,
+    this.lotSize,
     required this.issueSizeCr,
     required this.registrar,
     required this.registrarUrl,
@@ -42,6 +108,7 @@ class Ipo {
     this.gmp,
     this.listingPrice,
     this.isSme = false,
+    this.providerStatus,
   });
 
   final String id;
@@ -49,13 +116,14 @@ class Ipo {
   final String symbol;
   final String exchange;
   final String sector;
-  final DateTime openDate;
-  final DateTime closeDate;
-  final DateTime allotmentDate;
-  final DateTime listingDate;
+  final DateTime? openDate;
+  final DateTime? closeDate;
+  final DateTime? allotmentDate;
+  final DateTime? listingDate;
   final double priceMin;
   final double priceMax;
-  final int lotSize;
+  final double? issuePrice;
+  final int? lotSize;
   final double issueSizeCr;
   final String registrar;
   final String registrarUrl;
@@ -66,12 +134,29 @@ class Ipo {
   final double? gmp;
   final double? listingPrice;
   final bool isSme;
+  final IpoStatus? providerStatus;
 
   IpoStatus statusOn(DateTime now) {
-    final today = DateTime(now.year, now.month, now.day);
-    if (today.isBefore(openDate)) return IpoStatus.upcoming;
-    if (!today.isAfter(closeDate)) return IpoStatus.open;
-    if (today.isBefore(listingDate)) return IpoStatus.closed;
+    // An IPO cannot logically be "Open" without definitive opening/closing calendar dates.
+    if (providerStatus == IpoStatus.open) {
+      if (openDate == null || closeDate == null) {
+        return IpoStatus.upcoming;
+      }
+      if (now.isBefore(openDate!)) return IpoStatus.upcoming;
+      final closeEndOfDay = DateTime(closeDate!.year, closeDate!.month, closeDate!.day, 23, 59, 59);
+      if (now.isAfter(closeEndOfDay)) {
+        if (listingDate != null && now.isAfter(listingDate!)) return IpoStatus.listed;
+        return IpoStatus.closed;
+      }
+      return IpoStatus.open;
+    }
+    if (providerStatus != null) return providerStatus!;
+    if (openDate == null || closeDate == null) return IpoStatus.upcoming;
+    if (now.isBefore(openDate!)) return IpoStatus.upcoming;
+    final closeEndOfDay = DateTime(closeDate!.year, closeDate!.month, closeDate!.day, 23, 59, 59);
+    if (!now.isAfter(closeEndOfDay)) return IpoStatus.open;
+    if (listingDate != null && now.isBefore(listingDate!)) return IpoStatus.closed;
+    if (listingDate == null && now.isAfter(closeEndOfDay)) return IpoStatus.closed;
     return IpoStatus.listed;
   }
 
@@ -85,35 +170,49 @@ class Ipo {
     return parts.reduce((a, b) => a + b) / parts.length;
   }
 
-  double get minInvestment => priceMax * lotSize;
+  double get minInvestment =>
+      lotSize != null && lotSize! > 0 && priceMax > 0 ? priceMax * lotSize! : 0.0;
 
   double? get expectedListingGainPct =>
       gmp == null || priceMax == 0 ? null : (gmp! / priceMax) * 100;
 
   factory Ipo.fromJson(Map<String, dynamic> j) => Ipo(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        symbol: j['symbol'] as String? ?? '',
-        exchange: j['exchange'] as String? ?? 'NSE, BSE',
-        sector: j['sector'] as String? ?? 'Other',
-        openDate: DateTime.parse(j['openDate'] as String),
-        closeDate: DateTime.parse(j['closeDate'] as String),
-        allotmentDate: DateTime.parse(j['allotmentDate'] as String),
-        listingDate: DateTime.parse(j['listingDate'] as String),
-        priceMin: (j['priceMin'] as num).toDouble(),
-        priceMax: (j['priceMax'] as num).toDouble(),
-        lotSize: j['lotSize'] as int,
-        issueSizeCr: (j['issueSizeCr'] as num).toDouble(),
-        registrar: j['registrar'] as String? ?? '',
-        registrarUrl: j['registrarUrl'] as String? ?? '',
-        about: j['about'] as String? ?? '',
-        subscriptionQib: (j['subscriptionQib'] as num?)?.toDouble(),
-        subscriptionNii: (j['subscriptionNii'] as num?)?.toDouble(),
-        subscriptionRetail: (j['subscriptionRetail'] as num?)?.toDouble(),
-        gmp: (j['gmp'] as num?)?.toDouble(),
-        listingPrice: (j['listingPrice'] as num?)?.toDouble(),
-        isSme: j['isSme'] as bool? ?? false,
+        id: (j['id'] ?? '').toString(),
+        name: (j['name'] ?? '').toString(),
+        symbol: (j['symbol'] ?? '').toString(),
+        exchange: (j['exchange'] ?? 'NSE, BSE').toString(),
+        sector: (j['sector'] ?? 'Other').toString(),
+        openDate: j['openDate'] != null ? DateTime.tryParse(j['openDate'].toString()) : null,
+        closeDate: j['closeDate'] != null ? DateTime.tryParse(j['closeDate'].toString()) : null,
+        allotmentDate: j['allotmentDate'] != null ? DateTime.tryParse(j['allotmentDate'].toString()) : null,
+        listingDate: j['listingDate'] != null ? DateTime.tryParse(j['listingDate'].toString()) : null,
+        priceMin: _numToDouble(j['priceMin']),
+        priceMax: _numToDouble(j['priceMax']),
+        issuePrice: _numToNullableDouble(j['issuePrice']),
+        lotSize: _numToNullableInt(j['lotSize']),
+        issueSizeCr: _numToDouble(j['issueSizeCr']),
+        registrar: (j['registrar'] ?? '').toString(),
+        registrarUrl: (j['registrarUrl'] ?? '').toString(),
+        about: (j['about'] ?? '').toString(),
+        subscriptionQib: _numToNullableDouble(j['subscriptionQib']),
+        subscriptionNii: _numToNullableDouble(j['subscriptionNii']),
+        subscriptionRetail: _numToNullableDouble(j['subscriptionRetail']),
+        gmp: _numToNullableDouble(j['gmp']),
+        listingPrice: _numToNullableDouble(j['listingPrice']),
+        isSme: j['isSme'] == true || (j['isSme']?.toString().toLowerCase() == 'true'),
+        providerStatus: _parseState(j['state']?.toString()),
       );
+
+  static IpoStatus? _parseState(String? s) {
+    if (s == null) return null;
+    switch (s.toUpperCase()) {
+      case 'UPCOMING': return IpoStatus.upcoming;
+      case 'OPEN': return IpoStatus.open;
+      case 'CLOSED': return IpoStatus.closed;
+      case 'LISTED': return IpoStatus.listed;
+      default: return null;
+    }
+  }
 }
 
 class MarketIndex {
@@ -143,34 +242,59 @@ class MarketIndex {
 
   bool get isUp => change >= 0;
 
+  MarketIndex copyWith({
+    String? name,
+    String? exchange,
+    double? last,
+    double? change,
+    double? changePct,
+    double? open,
+    double? high,
+    double? low,
+    double? previousClose,
+    List<double>? sparkline,
+  }) =>
+      MarketIndex(
+        name: name ?? this.name,
+        exchange: exchange ?? this.exchange,
+        last: last ?? this.last,
+        change: change ?? this.change,
+        changePct: changePct ?? this.changePct,
+        open: open ?? this.open,
+        high: high ?? this.high,
+        low: low ?? this.low,
+        previousClose: previousClose ?? this.previousClose,
+        sparkline: sparkline ?? this.sparkline,
+      );
+
   factory MarketIndex.fromJson(Map<String, dynamic> e) => MarketIndex(
-        name: e['name'] as String,
+        name: (e['name'] ?? '').toString(),
         exchange: e['exchange'] as String? ?? 'NSE',
-        last: (e['last'] as num).toDouble(),
-        change: (e['change'] as num).toDouble(),
-        changePct: (e['changePct'] as num).toDouble(),
-        open: (e['open'] as num?)?.toDouble(),
-        high: (e['high'] as num?)?.toDouble(),
-        low: (e['low'] as num?)?.toDouble(),
-        previousClose: (e['previousClose'] as num?)?.toDouble(),
+        last: _numToDouble(e['last']),
+        change: _numToDouble(e['change']),
+        changePct: _numToDouble(e['changePct']),
+        open: _numToNullableDouble(e['open']),
+        high: _numToNullableDouble(e['high']),
+        low: _numToNullableDouble(e['low']),
+        previousClose: _numToNullableDouble(e['previousClose']),
         sparkline: ((e['sparkline'] as List?) ?? const [])
-            .map((v) => (v as num).toDouble())
+            .map(_numToDouble)
             .toList(),
       );
 
   factory MarketIndex.fromNse(Map<String, dynamic> j) {
-    final last = (j['last'] as num).toDouble();
-    final change = (j['variation'] as num).toDouble();
+    final last = _numToDouble(j['last']);
+    final change = _numToDouble(j['variation']);
     return MarketIndex(
-      name: j['index'] as String,
+      name: (j['index'] ?? '').toString(),
       exchange: 'NSE',
       last: last,
       change: change,
-      changePct: (j['percentChange'] as num).toDouble(),
-      open: (j['open'] as num?)?.toDouble(),
-      high: (j['high'] as num?)?.toDouble(),
-      low: (j['low'] as num?)?.toDouble(),
-      previousClose: (j['previousClose'] as num?)?.toDouble(),
+      changePct: _numToDouble(j['percentChange']),
+      open: _numToNullableDouble(j['open']),
+      high: _numToNullableDouble(j['high']),
+      low: _numToNullableDouble(j['low']),
+      previousClose: _numToNullableDouble(j['previousClose']),
     );
   }
 }
@@ -201,29 +325,37 @@ class StockQuote {
   bool get isUp => change >= 0;
 
   factory StockQuote.fromJson(Map<String, dynamic> e) => StockQuote(
-        symbol: e['symbol'] as String,
-        name: e['name'] as String? ?? e['symbol'] as String,
-        lastPrice: (e['lastPrice'] as num).toDouble(),
-        change: (e['change'] as num).toDouble(),
-        changePct: (e['changePct'] as num).toDouble(),
-        volume: (e['volume'] as num?)?.toInt(),
+        symbol: (e['symbol'] ?? '').toString(),
+        name: (e['name'] ?? e['symbol'] ?? '').toString(),
+        lastPrice: _numToDouble(e['lastPrice']),
+        change: _numToDouble(e['change']),
+        changePct: _numToDouble(e['changePct']),
+        volume: _numToNullableInt(e['volume']),
         sector: e['sector'] as String?,
         currency: e['currency'] as String? ?? '₹',
         sparkline: ((e['sparkline'] as List?) ?? const [])
-            .map((v) => (v as num).toDouble())
+            .map(_numToDouble)
             .toList(),
       );
 
-  factory StockQuote.fromNse(Map<String, dynamic> j) => StockQuote(
-        symbol: j['symbol'] as String,
-        name: (j['meta'] as Map<String, dynamic>?)?['companyName'] as String? ??
-            j['symbol'] as String,
-        lastPrice: (j['lastPrice'] as num).toDouble(),
-        change: (j['change'] as num).toDouble(),
-        changePct: (j['pChange'] as num).toDouble(),
-        volume: (j['totalTradedVolume'] as num?)?.toInt(),
-        sector: (j['meta'] as Map<String, dynamic>?)?['industry'] as String?,
-      );
+  factory StockQuote.fromNse(Map<String, dynamic> j) {
+    final meta = j['meta'] is Map ? (j['meta'] as Map) : null;
+    final companyName = meta?['companyName']?.toString();
+    final industry = meta?['industry']?.toString();
+    final symbol = (j['symbol'] ?? '').toString();
+
+    return StockQuote(
+      symbol: symbol,
+      name: (companyName != null && companyName.isNotEmpty)
+          ? companyName
+          : symbol,
+      lastPrice: _numToDouble(j['lastPrice']),
+      change: _numToDouble(j['change']),
+      changePct: _numToDouble(j['pChange']),
+      volume: _numToNullableInt(j['totalTradedVolume']),
+      sector: (industry != null && industry.isNotEmpty) ? industry : null,
+    );
+  }
 }
 
 enum TradeAction { buy, sell, hold }
@@ -320,11 +452,11 @@ class PanProfile {
       };
 
   factory PanProfile.fromJson(Map<String, dynamic> j) => PanProfile(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        pan: j['pan'] as String,
-        applicationNumber: j['applicationNumber'] as String?,
-        dpId: j['dpId'] as String?,
+        id: (j['id'] ?? '').toString(),
+        name: (j['name'] ?? '').toString(),
+        pan: (j['pan'] ?? '').toString().toUpperCase().trim(),
+        applicationNumber: j['applicationNumber']?.toString(),
+        dpId: j['dpId']?.toString(),
       );
 
   PanProfile copyWith({String? name, String? pan, String? applicationNumber, String? dpId}) =>
@@ -368,14 +500,24 @@ class AllotmentResult {
         'note': note,
       };
 
-  factory AllotmentResult.fromJson(Map<String, dynamic> j) => AllotmentResult(
-        profileId: j['profileId'] as String,
-        ipoId: j['ipoId'] as String,
-        outcome: AllotmentOutcome.values.byName(j['outcome'] as String),
-        checkedAt: DateTime.parse(j['checkedAt'] as String),
-        sharesAllotted: j['sharesAllotted'] as int?,
-        note: j['note'] as String?,
-      );
+  factory AllotmentResult.fromJson(Map<String, dynamic> j) {
+    final rawOutcome = (j['outcome'] ?? '').toString();
+    final outcome = AllotmentOutcome.values.firstWhere(
+      (e) => e.name == rawOutcome,
+      orElse: () => AllotmentOutcome.unknown,
+    );
+    final rawCheckedAt = j['checkedAt']?.toString() ?? '';
+    final checkedAt = DateTime.tryParse(rawCheckedAt) ?? DateTime.now();
+
+    return AllotmentResult(
+      profileId: (j['profileId'] ?? '').toString(),
+      ipoId: (j['ipoId'] ?? '').toString(),
+      outcome: outcome,
+      checkedAt: checkedAt,
+      sharesAllotted: _numToNullableInt(j['sharesAllotted']),
+      note: j['note']?.toString(),
+    );
+  }
 
   String get key => '$profileId|$ipoId';
 }

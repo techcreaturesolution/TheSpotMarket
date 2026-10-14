@@ -1,18 +1,22 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 
 /// Local persistence for PAN profiles, allotment results and user settings.
-/// PAN numbers stay on-device only; nothing is uploaded unless a backend
-/// allotment check is explicitly configured.
+/// Sensitive PAN profiles are stored in encrypted local storage (FlutterSecureStorage).
+/// Non-sensitive preferences (allotments, watchlist, dark mode) use SharedPreferences.
 class StorageService {
-  StorageService(this._prefs);
+  StorageService(this._prefs, {FlutterSecureStorage? secureStorage})
+      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   final SharedPreferences _prefs;
+  final FlutterSecureStorage _secureStorage;
 
   static const _kProfiles = 'pan_profiles';
+  static const _kSecureProfiles = 'secure_pan_profiles';
   static const _kAllotments = 'allotment_results';
   static const _kWatchlist = 'ipo_watchlist';
   static const _kDarkMode = 'dark_mode';
@@ -20,13 +24,68 @@ class StorageService {
   static const _kAiProvider = 'ai_provider';
   static const _kChatHistory = 'chat_history';
 
-  static Future<StorageService> create() async =>
-      StorageService(await SharedPreferences.getInstance());
+  List<PanProfile> _cachedProfiles = const [];
 
-  List<PanProfile> loadProfiles() => _loadList(_kProfiles, PanProfile.fromJson);
+  static Future<StorageService> create({
+    SharedPreferences? prefs,
+    FlutterSecureStorage? secureStorage,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    final service = StorageService(p, secureStorage: secureStorage);
+    await service._migrateAndLoadProfiles();
+    return service;
+  }
 
-  Future<void> saveProfiles(List<PanProfile> profiles) =>
-      _saveList(_kProfiles, profiles.map((p) => p.toJson()));
+  Future<void> _migrateAndLoadProfiles() async {
+    try {
+      final rawSecure = await _secureStorage.read(key: _kSecureProfiles);
+      if (rawSecure != null && rawSecure.isNotEmpty) {
+        _cachedProfiles = (jsonDecode(rawSecure) as List)
+            .cast<Map<String, dynamic>>()
+            .map(PanProfile.fromJson)
+            .toList();
+        // Remove legacy unencrypted key if it exists
+        if (_prefs.containsKey(_kProfiles)) {
+          await _prefs.remove(_kProfiles);
+        }
+        return;
+      }
+    } catch (_) {}
+
+    // Migration fallback: check legacy unencrypted SharedPreferences key
+    final oldRaw = _prefs.getString(_kProfiles);
+    if (oldRaw != null && oldRaw.isNotEmpty) {
+      try {
+        _cachedProfiles = (jsonDecode(oldRaw) as List)
+            .cast<Map<String, dynamic>>()
+            .map(PanProfile.fromJson)
+            .toList();
+        try {
+          await _secureStorage.write(
+            key: _kSecureProfiles,
+            value: jsonEncode(_cachedProfiles.map((p) => p.toJson()).toList()),
+          );
+          await _prefs.remove(_kProfiles);
+        } catch (_) {}
+        return;
+      } catch (_) {}
+    }
+
+    _cachedProfiles = const [];
+  }
+
+  List<PanProfile> loadProfiles() => List.unmodifiable(_cachedProfiles);
+
+  Future<void> saveProfiles(List<PanProfile> profiles) async {
+    _cachedProfiles = List.from(profiles);
+    try {
+      await _secureStorage.write(
+        key: _kSecureProfiles,
+        value: jsonEncode(profiles.map((p) => p.toJson()).toList()),
+      );
+    } catch (_) {}
+    await _prefs.remove(_kProfiles);
+  }
 
   List<AllotmentResult> loadAllotments() =>
       _loadList(_kAllotments, AllotmentResult.fromJson);
@@ -84,3 +143,4 @@ class StorageService {
   Future<void> _saveList(String key, Iterable<Map<String, dynamic>> items) =>
       _prefs.setString(key, jsonEncode(items.toList()));
 }
+

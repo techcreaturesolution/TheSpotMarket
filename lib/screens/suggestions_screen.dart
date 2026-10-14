@@ -20,12 +20,17 @@ class _SuggestionsScreenState extends State<SuggestionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    final all = widget.global ? s.globalSuggestions : s.stockSuggestions;
-    final loading = widget.global ? s.globalLoading : s.marketLoading;
+    // Only rebuild when suggestions change — not on every market tick.
+    final all = context.select<AppState, List<StockSuggestion>>(
+      (s) => widget.global ? s.globalSuggestions : s.stockSuggestions,
+    );
+    final loading = context.select<AppState, bool>(
+      (s) => widget.global ? s.globalLoading : s.marketLoading,
+    );
     final items = _filter == null ? all : all.where((e) => e.action == _filter).toList();
     final buys = all.where((e) => e.action == TradeAction.buy).length;
     final sells = all.where((e) => e.action == TradeAction.sell).length;
+    final s = context.read<AppState>();
 
     return Scaffold(
       appBar: AppBar(
@@ -93,7 +98,7 @@ class SuggestionStrip extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           itemCount: picks.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          separatorBuilder: (context, index) => const SizedBox(width: 8),
           itemBuilder: (context, i) {
             final p = picks[i];
             final q = p.quote;

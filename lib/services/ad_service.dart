@@ -29,7 +29,6 @@ class AdService {
     await MobileAds.instance.updateRequestConfiguration(
       RequestConfiguration(
         maxAdContentRating: MaxAdContentRating.g,
-        ageRestrictedTreatment: AgeRestrictedTreatment.unspecified,
       ),
     );
     _initialized = true;

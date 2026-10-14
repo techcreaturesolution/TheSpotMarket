@@ -48,15 +48,28 @@ class AuthService extends ChangeNotifier {
     if (e is FirebaseAuthException) {
       return switch (e.code) {
         'invalid-email' => 'Enter a valid email address.',
-        'user-not-found' || 'wrong-password' || 'invalid-credential' => 'Incorrect email or password.',
+        'user-not-found' ||
+        'wrong-password' ||
+        'invalid-credential' ||
+        'user-disabled' =>
+          'Incorrect email or password.',
         'email-already-in-use' => 'An account already exists for this email.',
         'weak-password' => 'Password should be at least 6 characters.',
-        'invalid-phone-number' => 'Enter a valid mobile number with country code (+91…).',
-        'invalid-verification-code' => 'Incorrect OTP. Please try again.',
+        'invalid-phone-number' =>
+          'Enter a valid mobile number with country code (+91…).',
+        'invalid-verification-code' ||
+        'invalid-verification-id' =>
+          'Incorrect OTP. Please try again.',
+        'session-expired' ||
+        'quota-exceeded' =>
+          'Verification session expired or limit reached. Please try again.',
         'too-many-requests' => 'Too many attempts. Try again later.',
         'network-request-failed' => 'Network error. Check your connection.',
         _ => e.message ?? 'Authentication failed (${e.code}).',
       };
+    }
+    if (e is StateError) {
+      return e.message;
     }
     return e.toString();
   }
@@ -68,7 +81,7 @@ class AuthService extends ChangeNotifier {
         await cred.user?.updateDisplayName(name.trim());
         await cred.user?.sendEmailVerification();
         await cred.user?.reload();
-        _user = _auth.currentUser;
+        _user = _auth?.currentUser;
       });
 
   Future<void> signInWithEmail(String email, String password) => _run(() =>
@@ -86,7 +99,7 @@ class AuthService extends ChangeNotifier {
           forceResendingToken: _resendToken,
           timeout: const Duration(seconds: 60),
           verificationCompleted: (cred) async {
-            await _auth.signInWithCredential(cred);
+            await _auth!.signInWithCredential(cred);
             _verificationId = null;
             if (!done.isCompleted) done.complete();
           },

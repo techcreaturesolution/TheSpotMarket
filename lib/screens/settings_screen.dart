@@ -34,8 +34,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
+    // Use narrow selects — settings screen only needs darkMode state reactively.
+    // All actions (setAiConfig, setDarkMode, resetData) go through context.read.
+    final darkMode = context.select<AppState, bool>((s) => s.darkMode);
     final auth = context.watch<AuthService>();
+    final s = context.read<AppState>();
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -170,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             title: const Text('Dark mode'),
             secondary: const Icon(Icons.dark_mode_outlined),
-            value: s.darkMode,
+            value: darkMode,
             onChanged: s.setDarkMode,
           ),
 

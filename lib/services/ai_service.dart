@@ -123,9 +123,20 @@ NII, retail quota, listing gains).''';
   }
 
   // ---------------------------------------------------------------------------
-  // Heuristic analytics (always available)
+  // Heuristic analytics (always available with high-performance memoization)
   // ---------------------------------------------------------------------------
+  static final _scoreCache = <String, IpoScore>{};
+  static final _sentimentCache = <String, Sentiment>{};
+
   static IpoScore scoreIpo(Ipo ipo) {
+    final cached = _scoreCache[ipo.id];
+    if (cached != null) return cached;
+    final res = _computeScoreIpo(ipo);
+    _scoreCache[ipo.id] = res;
+    return res;
+  }
+
+  static IpoScore _computeScoreIpo(Ipo ipo) {
     var score = 50.0;
     final reasons = <String>[];
 
@@ -208,6 +219,15 @@ NII, retail quota, listing gains).''';
   ];
 
   static Sentiment sentimentOf(String text) {
+    final cached = _sentimentCache[text];
+    if (cached != null) return cached;
+    final res = _computeSentiment(text);
+    if (_sentimentCache.length > 500) _sentimentCache.clear();
+    _sentimentCache[text] = res;
+    return res;
+  }
+
+  static Sentiment _computeSentiment(String text) {
     final t = text.toLowerCase();
     var s = 0;
     for (final w in _bullish) {

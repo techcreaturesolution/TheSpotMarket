@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../config/app_config.dart';
@@ -14,74 +15,212 @@ class AllotmentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
-    final checkable = s.ipos
+    // Only select allotment-related data — not market indices that tick every second.
+    final ipos = context.select<AppState, List<Ipo>>((s) => s.ipos);
+    final profiles = context.select<AppState, List<PanProfile>>((s) => s.profiles);
+    final checkable = ipos
         .where((i) => i.status == IpoStatus.closed || i.status == IpoStatus.listed)
         .toList();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final s = context.read<AppState>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('IPO Allotment')),
       floatingActionButton: FloatingActionButton.small(
         heroTag: 'add-pan',
         onPressed: () => showPanDialog(context),
-        child: const Icon(Icons.person_add_alt_1),
+        child: const Icon(Icons.person_add_alt_1, size: 18),
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 96),
         children: [
-          SectionHeader('Family & friends (${s.profiles.length} PAN${s.profiles.length == 1 ? '' : 's'})',
-              action: 'Add PAN', onAction: () => showPanDialog(context)),
-          if (s.profiles.isEmpty)
+          SectionHeader(
+            'Family & friends (${profiles.length} PAN${profiles.length == 1 ? '' : 's'})',
+            action: 'Add PAN',
+            onAction: () => showPanDialog(context),
+          ),
+          if (profiles.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                child: ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text('Add PAN cards to check allotment for everyone at once'),
-                  subtitle: const Text('PAN numbers are stored only on this device.'),
-                  onTap: () => showPanDialog(context),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFBFDBFE),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFDBEAFE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.badge_outlined, color: Color(0xFF2563EB), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Add PAN cards for 1-tap allotment check',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Check allotment for family & friends at once. Stored locally.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => showPanDialog(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Add', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    ),
+                  ],
                 ),
               ),
             )
           else
             ...s.profiles.map((p) => _ProfileTile(profile: p)),
-          SectionHeader('Check allotment status'),
+          const SectionHeader('Check allotment status'),
           if (checkable.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('No IPO has closed recently. Allotment can be checked after the issue closes.'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'No IPO has closed recently. Allotment can be checked after the issue closes.',
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline),
+              ),
             )
           else
             ...checkable.map((ipo) {
               final results = s.allotmentsForIpo(ipo.id);
               final allotted = results.where((r) => r.outcome == AllotmentOutcome.allotted).length;
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                child: ListTile(
-                  title: Text(ipo.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text(
-                    'Allotment ${dateFmt.format(ipo.allotmentDate)} · Listing ${dateFmt.format(ipo.listingDate)} · ${ipo.registrar}'
-                    '${results.isNotEmpty ? '\n$allotted of ${results.length} allotted' : ''}',
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF111827) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+                    width: 1,
                   ),
-                  isThreeLine: results.isNotEmpty,
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => AllotmentCheckScreen(ipo: ipo))),
+                ),
+                child: ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                  title: Text(
+                    ipo.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Allotment ${ipo.allotmentDate != null ? dateFmt.format(ipo.allotmentDate!) : "—"} · Listing ${ipo.listingDate != null ? dateFmt.format(ipo.listingDate!) : "—"} · ${ipo.registrar}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (results.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: allotted > 0
+                                  ? const Color(0xFF10B981).withValues(alpha: .12)
+                                  : (isDark ? const Color(0xFF1F2937) : const Color(0xFFF1F5F9)),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '$allotted/${results.length} Allotted',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: allotted > 0
+                                    ? const Color(0xFF10B981)
+                                    : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => AllotmentCheckScreen(ipo: ipo)),
+                  ),
                 ),
               );
             }),
           const SectionHeader('Registrar portals'),
-          ...AppConfig.registrars.map((r) => ListTile(
-                dense: true,
-                leading: const Icon(Icons.language, size: 20),
-                title: Text(r.name),
-                trailing: const Icon(Icons.open_in_new, size: 16),
-                onTap: () => Navigator.push(
+          ...AppConfig.registrars.map((r) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF111827) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                ),
+                child: ListTile(
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.language, size: 16, color: Color(0xFF059669)),
+                  ),
+                  title: Text(
+                    r.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  trailing: const Icon(Icons.open_in_new, size: 14, color: Color(0xFF94A3B8)),
+                  onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => RegistrarWebView(registrar: r, profiles: s.profiles))),
+                      builder: (_) => RegistrarWebView(registrar: r, profiles: s.profiles),
+                    ),
+                  ),
+                ),
               )),
-        ],
+        ],  
       ),
     );
   }
@@ -94,29 +233,85 @@ class _ProfileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.read<AppState>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final masked = '${profile.pan.substring(0, 5)}••••${profile.pan.substring(9)}';
-    return ListTile(
-      leading: CircleAvatar(child: Text(profile.name.isEmpty ? '?' : profile.name[0].toUpperCase())),
-      title: Text(profile.name),
-      subtitle: Text(masked + (profile.dpId != null ? ' · DP ${profile.dpId}' : '')),
-      trailing: PopupMenuButton<String>(
-        onSelected: (v) async {
-          if (v == 'copy') {
-            await Clipboard.setData(ClipboardData(text: profile.pan));
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PAN copied')));
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        leading: CircleAvatar(
+          radius: 16,
+          backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+          child: Text(
+            profile.name.isEmpty ? '?' : profile.name[0].toUpperCase(),
+            style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF2563EB), fontSize: 13),
+          ),
+        ),
+        title: Text(
+          profile.name,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+        ),
+        subtitle: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                masked,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                  color: isDark ? Colors.white70 : const Color(0xFF475569),
+                ),
+              ),
+            ),
+            if (profile.dpId != null) ...[
+              const SizedBox(width: 6),
+              Text(
+                'DP: ${profile.dpId}',
+                style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : const Color(0xFF94A3B8)),
+              ),
+            ],
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, size: 18, color: Color(0xFF94A3B8)),
+          onSelected: (v) async {
+            if (v == 'copy') {
+              await Clipboard.setData(ClipboardData(text: profile.pan));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PAN copied')));
+              }
+            } else if (v == 'edit') {
+              if (context.mounted) showPanDialog(context, existing: profile);
+            } else if (v == 'delete') {
+              s.removeProfile(profile.id);
             }
-          } else if (v == 'edit') {
-            if (context.mounted) showPanDialog(context, existing: profile);
-          } else if (v == 'delete') {
-            s.removeProfile(profile.id);
-          }
-        },
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: 'copy', child: Text('Copy PAN')),
-          PopupMenuItem(value: 'edit', child: Text('Edit')),
-          PopupMenuItem(value: 'delete', child: Text('Remove')),
-        ],
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'copy', child: Text('Copy PAN')),
+            PopupMenuItem(value: 'edit', child: Text('Edit')),
+            PopupMenuItem(value: 'delete', child: Text('Remove')),
+          ],
+        ),
       ),
     );
   }
@@ -192,93 +387,265 @@ class AllotmentCheckScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppState>();
+    // Select only allotment-related data — avoids rebuilding on market ticks.
+    final profiles = context.select<AppState, List<PanProfile>>((s) => s.profiles);
+    final allotmentResults = context.select<AppState, List<AllotmentResult>>(
+      (s) => s.allotmentsForIpo(ipo.id),
+    );
+    final s = context.read<AppState>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final registrar = AllotmentService.registrarFor(ipo);
-    final results = {for (final r in s.allotmentsForIpo(ipo.id)) r.profileId: r};
+    final results = {for (final r in allotmentResults) r.profileId: r};
     final allotted = results.values.where((r) => r.outcome == AllotmentOutcome.allotted).length;
     final notAllotted = results.values.where((r) => r.outcome == AllotmentOutcome.notAllotted).length;
+    final pendingCount = (profiles.length - allotted - notAllotted).clamp(0, 999);
 
     return Scaffold(
-      appBar: AppBar(title: Text('${ipo.name} allotment', maxLines: 1, overflow: TextOverflow.ellipsis)),
+      appBar: AppBar(
+        title: Text(
+          '${ipo.name} allotment',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+      ),
       bottomNavigationBar: const BannerAdWidget(),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          Card(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(children: [
-                _Count('Allotted', allotted, const Color(0xFF16A34A)),
-                _Count('Not allotted', notAllotted, const Color(0xFFDC2626)),
-                _Count('Pending', s.profiles.length - allotted - notAllotted, Colors.orange),
-              ]),
+          // Sleek light trading container summary box (Replaces dark navy container)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                _Count('Allotted', allotted, const Color(0xFF10B981)),
+                Container(height: 32, width: 1, color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                _Count('Not allotted', notAllotted, const Color(0xFFEF4444)),
+                Container(height: 32, width: 1, color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                _Count('Pending', pendingCount, const Color(0xFFF59E0B)),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text('Registrar: ${ipo.registrar} · Allotment date ${dateFullFmt.format(ipo.allotmentDate)}',
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF111827) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.business_center_outlined, size: 14, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Registrar: ${ipo.registrar}  •  Allotment Date: ${ipo.allotmentDate != null ? dateFullFmt.format(ipo.allotmentDate!) : 'TBA'}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
           if (s.profiles.isEmpty)
-            EmptyState(
-              icon: Icons.person_add_alt_1,
-              title: 'No PAN added yet',
-              subtitle: 'Add PAN cards of family & friends to check everyone in one go.',
-              action: FilledButton(onPressed: () => showPanDialog(context), child: const Text('Add PAN')),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF111827) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.person_add_alt_1, size: 32, color: Color(0xFF2563EB)),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No PAN added yet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Add PAN cards of family & friends to check everyone in one go.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    ),
+                    onPressed: () => showPanDialog(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add PAN', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
             )
           else ...[
-            Row(children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: s.checkingAllotment
-                      ? null
-                      : () async {
-                          if (s.allotmentService.supportsAutoCheck) {
-                            final err = await s.checkAllotmentsFor(ipo);
-                            if (err != null && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-                            }
-                          } else if (registrar != null) {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => RegistrarWebView(
-                                        registrar: registrar, profiles: s.profiles, ipo: ipo)));
+            SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: s.checkingAllotment
+                    ? null
+                    : () async {
+                        if (s.allotmentService.supportsAutoCheck) {
+                          final err = await s.checkAllotmentsFor(ipo);
+                          if (err != null && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
                           }
-                        },
-                  icon: s.checkingAllotment
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.search),
-                  label: Text(s.allotmentService.supportsAutoCheck
+                        } else if (registrar != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RegistrarWebView(
+                                registrar: registrar,
+                                profiles: s.profiles,
+                                ipo: ipo,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                icon: s.checkingAllotment
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.search, size: 18),
+                label: Text(
+                  s.allotmentService.supportsAutoCheck
                       ? 'Check all ${s.profiles.length} PANs'
-                      : 'Open registrar & check'),
+                      : 'Open registrar & check',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
               ),
-            ]),
+            ),
             if (!s.allotmentService.supportsAutoCheck)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 6, bottom: 4),
                 child: Text(
-                  'Registrar sites use a CAPTCHA, so the app auto-fills each PAN and you tap Submit. Record the result below for each person.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  'Registrar sites require CAPTCHA verification. The app auto-fills each PAN so you can easily solve CAPTCHA and submit.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                  ),
                 ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             ...s.profiles.map((p) {
               final r = results[p.id];
-              return Card(
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF111827) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                ),
                 child: ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                   leading: _OutcomeIcon(r?.outcome ?? AllotmentOutcome.unknown),
-                  title: Text(p.name),
-                  subtitle: Text([
-                    p.pan,
-                    if (r?.sharesAllotted != null) '${r!.sharesAllotted} shares',
-                    if (r?.note != null) r!.note!,
-                    if (r != null) 'Checked ${timeAgo(r.checkedAt)}',
-                  ].join(' · ')),
+                  title: Text(
+                    p.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1F2937) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            p.pan,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            ),
+                          ),
+                        ),
+                        if (r?.sharesAllotted != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${r!.sharesAllotted} shares',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ),
+                        if (r != null)
+                          Text(
+                            'Checked ${timeAgo(r.checkedAt)}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   trailing: PopupMenuButton<AllotmentOutcome>(
                     tooltip: 'Record result',
-                    icon: const Icon(Icons.edit_note),
+                    icon: const Icon(Icons.edit_note, size: 20, color: Color(0xFF94A3B8)),
                     onSelected: (o) => _record(context, p, o),
                     itemBuilder: (_) => const [
                       PopupMenuItem(value: AllotmentOutcome.allotted, child: Text('Allotted')),
@@ -289,10 +656,15 @@ class AllotmentCheckScreen extends StatelessWidget {
                   onTap: registrar == null
                       ? null
                       : () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
+                            context,
+                            MaterialPageRoute(
                               builder: (_) => RegistrarWebView(
-                                  registrar: registrar, profiles: [p], ipo: ipo))),
+                                registrar: registrar,
+                                profiles: [p],
+                                ipo: ipo,
+                              ),
+                            ),
+                          ),
                 ),
               );
             }),
@@ -305,7 +677,8 @@ class AllotmentCheckScreen extends StatelessWidget {
   Future<void> _record(BuildContext context, PanProfile p, AllotmentOutcome o) async {
     int? shares;
     if (o == AllotmentOutcome.allotted) {
-      final c = TextEditingController(text: ipo.lotSize.toString());
+      final defaultLot = ipo.lotSize ?? 50;
+      final c = TextEditingController(text: defaultLot.toString());
       shares = await showDialog<int>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -313,7 +686,7 @@ class AllotmentCheckScreen extends StatelessWidget {
           content: TextField(controller: c, keyboardType: TextInputType.number, autofocus: true),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, int.tryParse(c.text) ?? ipo.lotSize), child: const Text('Save')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, int.tryParse(c.text) ?? defaultLot), child: const Text('Save')),
           ],
         ),
       );
@@ -337,12 +710,33 @@ class _Count extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Expanded(
-        child: Column(children: [
-          Text('$count', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: color)),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: color,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _OutcomeIcon extends StatelessWidget {
@@ -350,12 +744,36 @@ class _OutcomeIcon extends StatelessWidget {
   final AllotmentOutcome outcome;
 
   @override
-  Widget build(BuildContext context) => switch (outcome) {
-        AllotmentOutcome.allotted => const Icon(Icons.check_circle, color: Color(0xFF16A34A)),
-        AllotmentOutcome.notAllotted => const Icon(Icons.cancel, color: Color(0xFFDC2626)),
-        AllotmentOutcome.pending => const Icon(Icons.hourglass_top, color: Colors.orange),
-        AllotmentOutcome.unknown => const Icon(Icons.help_outline, color: Colors.grey),
-      };
+  Widget build(BuildContext context) {
+    final (icon, color, bg) = switch (outcome) {
+      AllotmentOutcome.allotted => (
+          Icons.check_circle_rounded,
+          const Color(0xFF10B981),
+          const Color(0xFF10B981).withValues(alpha: .12)
+        ),
+      AllotmentOutcome.notAllotted => (
+          Icons.cancel_rounded,
+          const Color(0xFFEF4444),
+          const Color(0xFFEF4444).withValues(alpha: .12)
+        ),
+      AllotmentOutcome.pending => (
+          Icons.hourglass_top_rounded,
+          const Color(0xFFF59E0B),
+          const Color(0xFFF59E0B).withValues(alpha: .12)
+        ),
+      AllotmentOutcome.unknown => (
+          Icons.help_outline_rounded,
+          const Color(0xFF94A3B8),
+          const Color(0xFF94A3B8).withValues(alpha: .12)
+        ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+      child: Icon(icon, color: color, size: 18),
+    );
+  }
 }
 
 /// In-app registrar page. Cycles through the given PANs, auto-filling each
@@ -383,10 +801,17 @@ class _RegistrarWebViewState extends State<RegistrarWebView> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(NavigationDelegate(
-        onPageStarted: (_) => setState(() => _loading = true),
+        onPageStarted: (_) {
+          if (mounted) setState(() => _loading = true);
+        },
         onPageFinished: (_) {
-          setState(() => _loading = false);
-          _fill();
+          if (mounted) {
+            setState(() => _loading = false);
+            _fill();
+          }
+        },
+        onWebResourceError: (_) {
+          if (mounted) setState(() => _loading = false);
         },
       ))
       ..loadRequest(Uri.parse(widget.registrar.url));
@@ -418,53 +843,78 @@ class _RegistrarWebViewState extends State<RegistrarWebView> {
           ipoId: ipo.id,
           outcome: o,
           checkedAt: DateTime.now(),
-          sharesAllotted: o == AllotmentOutcome.allotted ? ipo.lotSize : null,
+          sharesAllotted: o == AllotmentOutcome.allotted ? (ipo.lotSize ?? 50) : null,
         ));
     if (_current < widget.profiles.length - 1) {
-      setState(() => _current++);
-      _controller.reload();
+      if (mounted) {
+        setState(() => _current++);
+        _controller.reload();
+      }
     } else if (mounted) {
       Navigator.pop(context);
     }
   }
 
+  Future<void> _openExternal() async {
+    try {
+      final uri = Uri.parse(widget.registrar.url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = _profile;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.registrar.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.open_in_browser),
+            tooltip: 'Open in browser',
+            onPressed: _openExternal,
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _controller.reload),
         ],
         bottom: _loading ? const PreferredSize(preferredSize: Size.fromHeight(3), child: LinearProgressIndicator()) : null,
       ),
       body: Column(children: [
         if (p != null)
-          Material(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('${_current + 1}/${widget.profiles.length} · ${p.name}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(p.pan, style: const TextStyle(fontSize: 12, letterSpacing: 1)),
-                  ]),
-                ),
-                IconButton(tooltip: 'Copy PAN', icon: const Icon(Icons.copy, size: 18), onPressed: _copyPan),
-                IconButton(tooltip: 'Auto-fill PAN', icon: const Icon(Icons.auto_fix_high, size: 18), onPressed: _fill),
-                if (widget.profiles.length > 1)
-                  IconButton(
-                    tooltip: 'Next person',
-                    icon: const Icon(Icons.skip_next),
-                    onPressed: () {
-                      setState(() => _current = (_current + 1) % widget.profiles.length);
-                      _controller.reload();
-                    },
+          Container(
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(
+                    '${_current + 1}/${widget.profiles.length} · ${p.name}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
                   ),
-              ]),
-            ),
+                  Text(
+                    p.pan,
+                    style: const TextStyle(fontSize: 12, letterSpacing: 1, color: Color(0xFF2563EB), fontWeight: FontWeight.w700),
+                  ),
+                ]),
+              ),
+              IconButton(tooltip: 'Copy PAN', icon: const Icon(Icons.copy, size: 18), onPressed: _copyPan),
+              IconButton(tooltip: 'Auto-fill PAN', icon: const Icon(Icons.auto_fix_high, size: 18), onPressed: _fill),
+              if (widget.profiles.length > 1)
+                IconButton(
+                  tooltip: 'Next person',
+                  icon: const Icon(Icons.skip_next),
+                  onPressed: () {
+                    setState(() => _current = (_current + 1) % widget.profiles.length);
+                    _controller.reload();
+                  },
+                ),
+            ]),
           ),
         Expanded(child: WebViewWidget(controller: _controller)),
         if (widget.ipo != null && p != null)
@@ -475,19 +925,25 @@ class _RegistrarWebViewState extends State<RegistrarWebView> {
               child: Row(children: [
                 Expanded(
                   child: FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                     onPressed: () => _record(AllotmentOutcome.allotted),
-                    icon: const Icon(Icons.check),
-                    label: const Text('Allotted'),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Allotted', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                     onPressed: () => _record(AllotmentOutcome.notAllotted),
-                    icon: const Icon(Icons.close),
-                    label: const Text('Not allotted'),
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text('Not allotted', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ]),
@@ -497,3 +953,4 @@ class _RegistrarWebViewState extends State<RegistrarWebView> {
     );
   }
 }
+
