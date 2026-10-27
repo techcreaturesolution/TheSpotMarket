@@ -615,10 +615,10 @@ class _AuthScreenState extends State<AuthScreen> {
 }
 
 // ==============================================================================
-// 3D Liquid Glass Orb (Concentric Refraction & Glossy Ring from Reference UI)
+// Brand App Icon Header (Concentric Liquid Emerald Aura & Official App Icon)
 // ==============================================================================
 class _LiquidGlassOrb extends StatelessWidget {
-  const _LiquidGlassOrb({this.size = 80});
+  const _LiquidGlassOrb({this.size = 86});
   final double size;
 
   @override
@@ -632,91 +632,50 @@ class _LiquidGlassOrb extends StatelessWidget {
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            // 1. Ambient Outer Liquid Glow
+            // 1. Ambient Outer Liquid Emerald Glow
             Container(
-              width: size * 1.25,
-              height: size * 1.25,
+              width: size * 1.35,
+              height: size * 1.35,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF10B981).withValues(alpha: 0.35),
-                    const Color(0xFF059669).withValues(alpha: 0.12),
+                    const Color(0xFF10B981).withValues(alpha: 0.40),
+                    const Color(0xFF059669).withValues(alpha: 0.15),
                     Colors.transparent,
                   ],
                 ),
               ),
             ),
 
-            // 2. Liquid Glass Outer Orbital Ring
+            // 2. Official App Icon with Rounded Glass Bezel
             Container(
               width: size,
               height: size,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.20),
-                  width: 1.5,
-                ),
+                borderRadius: BorderRadius.circular(22),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.25),
-                    blurRadius: 18,
-                    spreadRadius: 2,
+                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.50),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
-              ),
-            ),
-
-            // 3. Frosted Liquid Glass Core with Backdrop Blur
-            ClipOval(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: Container(
-                  width: size * 0.82,
-                  height: size * 0.82,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.22),
-                        const Color(0xFF059669).withValues(alpha: 0.25),
-                        const Color(0xFF042014).withValues(alpha: 0.70),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.32),
-                      width: 1.2,
-                    ),
-                  ),
-                  child: Center(
-                    // Geometric "S" monogram matching bottom-right of reference mockup
-                    child: CustomPaint(
-                      size: Size(size * 0.36, size * 0.36),
-                      painter: const _LiquidBrandMarkPainter(),
-                    ),
-                  ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  width: 1.5,
                 ),
               ),
-            ),
-
-            // 4. Liquid Glass Specular Glint Highlight (Top-left physical reflection)
-            Positioned(
-              top: size * 0.14,
-              left: size * 0.22,
-              child: Container(
-                width: size * 0.22,
-                height: size * 0.09,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(size),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.white.withValues(alpha: 0.8),
-                      Colors.white.withValues(alpha: 0.0),
-                    ],
-                  ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/app_icon.png',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -725,41 +684,6 @@ class _LiquidGlassOrb extends StatelessWidget {
       ),
     );
   }
-}
-
-// ==============================================================================
-// Geometric Brand Mark Painter (SpotMarket "S" Emblem)
-// ==============================================================================
-class _LiquidBrandMarkPainter extends CustomPainter {
-  const _LiquidBrandMarkPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final stroke = w * 0.20;
-
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.square
-      ..strokeJoin = StrokeJoin.miter;
-
-    // Geometric "S"
-    final path = Path();
-    path.moveTo(w, h * 0.16);
-    path.lineTo(w * 0.14, h * 0.16);
-    path.lineTo(w * 0.14, h * 0.50);
-    path.lineTo(w * 0.86, h * 0.50);
-    path.lineTo(w * 0.86, h * 0.84);
-    path.lineTo(0, h * 0.84);
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ==============================================================================
