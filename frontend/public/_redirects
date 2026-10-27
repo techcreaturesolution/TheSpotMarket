@@ -1,0 +1,6 @@
+# 301 Permanent Redirects for legacy and alias URLs
+/privacy              /privacy-policy       301
+/faq                  /contact#faq          301
+
+# SPA client-side routing fallback (All unmatched routes go to index.html with HTTP 200)
+/*                    /index.html           200

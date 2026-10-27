@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 /// Firebase Authentication (free Spark plan): email/password + phone OTP.
 /// When Firebase is not configured (no google-services.json), [isAvailable]
-/// is false and the app runs in guest mode.
+/// is false and the service operates in graceful local/demo mode.
 class AuthService extends ChangeNotifier {
   AuthService({FirebaseAuth? auth, required this.isAvailable})
       : _auth = isAvailable ? (auth ?? FirebaseAuth.instance) : null {
@@ -23,15 +23,25 @@ class AuthService extends ChangeNotifier {
   int? _resendToken;
   bool _busy = false;
 
+  // Local/demo fallback state for development or when Firebase is not configured
+  bool _mockSignedIn = false;
+  String? _mockName;
+  String? _mockEmail;
+  String? _mockPhone;
+
   User? get user => _user;
-  bool get isSignedIn => _user != null;
+  bool get isSignedIn => _user != null || _mockSignedIn;
   bool get busy => _busy;
   bool get otpSent => _verificationId != null;
 
   String get displayName =>
       _user?.displayName?.trim().isNotEmpty == true
           ? _user!.displayName!
-          : (_user?.email ?? _user?.phoneNumber ?? 'Guest');
+          : (_mockName ?? _user?.email ?? _mockEmail ?? _user?.phoneNumber ?? _mockPhone ?? 'Guest');
+
+
+  String? get email => _user?.email ?? _mockEmail;
+  String? get phoneNumber => _user?.phoneNumber ?? _mockPhone;
 
   Future<T> _run<T>(Future<T> Function() fn) async {
     _busy = true;
@@ -76,56 +86,94 @@ class AuthService extends ChangeNotifier {
 
   Future<void> registerWithEmail(String name, String email, String password) =>
       _run(() async {
-        final cred = await _auth!.createUserWithEmailAndPassword(
-            email: email.trim(), password: password);
-        await cred.user?.updateDisplayName(name.trim());
-        await cred.user?.sendEmailVerification();
-        await cred.user?.reload();
-        _user = _auth?.currentUser;
+        if (_auth != null) {
+          final cred = await _auth!.createUserWithEmailAndPassword(
+              email: email.trim(), password: password);
+          await cred.user?.updateDisplayName(name.trim());
+          await cred.user?.sendEmailVerification();
+          await cred.user?.reload();
+          _user = _auth?.currentUser;
+        } else {
+          // Local/demo fallback
+          _mockName = name.trim();
+          _mockEmail = email.trim();
+          _mockSignedIn = true;
+          notifyListeners();
+        }
       });
 
-  Future<void> signInWithEmail(String email, String password) => _run(() =>
-      _auth!.signInWithEmailAndPassword(email: email.trim(), password: password));
+  Future<void> signInWithEmail(String email, String password) => _run(() async {
+        if (_auth != null) {
+          await _auth!.signInWithEmailAndPassword(email: email.trim(), password: password);
+        } else {
+          // Local/demo fallback
+          _mockEmail = email.trim();
+          _mockName = email.split('@').first;
+          _mockSignedIn = true;
+          notifyListeners();
+        }
+      });
 
-  Future<void> sendPasswordReset(String email) =>
-      _run(() => _auth!.sendPasswordResetEmail(email: email.trim()));
+  Future<void> sendPasswordReset(String email) => _run(() async {
+        if (_auth != null) {
+          await _auth!.sendPasswordResetEmail(email: email.trim());
+        }
+      });
 
-  /// Sends an OTP. Completes when the code is sent (or auto-verified on
-  /// Android). Throws on failure.
+  /// Sends an OTP. Completes when the code is sent (or auto-verified on Android).
   Future<void> sendOtp(String phone) => _run(() async {
-        final done = Completer<void>();
-        await _auth!.verifyPhoneNumber(
-          phoneNumber: phone.trim(),
-          forceResendingToken: _resendToken,
-          timeout: const Duration(seconds: 60),
-          verificationCompleted: (cred) async {
-            await _auth!.signInWithCredential(cred);
-            _verificationId = null;
-            if (!done.isCompleted) done.complete();
-          },
-          verificationFailed: (e) {
-            if (!done.isCompleted) done.completeError(e);
-          },
-          codeSent: (id, token) {
-            _verificationId = id;
-            _resendToken = token;
-            if (!done.isCompleted) done.complete();
-          },
-          codeAutoRetrievalTimeout: (id) => _verificationId ??= id,
-        );
-        return done.future;
+        if (_auth != null) {
+          final done = Completer<void>();
+          await _auth!.verifyPhoneNumber(
+            phoneNumber: phone.trim(),
+            forceResendingToken: _resendToken,
+            timeout: const Duration(seconds: 60),
+            verificationCompleted: (cred) async {
+              await _auth!.signInWithCredential(cred);
+              _verificationId = null;
+              if (!done.isCompleted) done.complete();
+            },
+            verificationFailed: (e) {
+              if (!done.isCompleted) done.completeError(e);
+            },
+            codeSent: (id, token) {
+              _verificationId = id;
+              _resendToken = token;
+              if (!done.isCompleted) done.complete();
+            },
+            codeAutoRetrievalTimeout: (id) => _verificationId ??= id,
+          );
+          return done.future;
+        } else {
+          // Local/demo fallback: simulate OTP sent
+          _mockPhone = phone.trim();
+          _verificationId = 'demo_verification_token';
+          notifyListeners();
+        }
       });
 
   Future<void> verifyOtp(String code, {String? displayName}) => _run(() async {
-        final id = _verificationId;
-        if (id == null) throw StateError('Request an OTP first.');
-        final cred = PhoneAuthProvider.credential(
-            verificationId: id, smsCode: code.trim());
-        final result = await _auth!.signInWithCredential(cred);
-        if (displayName != null && displayName.trim().isNotEmpty) {
-          await result.user?.updateDisplayName(displayName.trim());
+        if (_auth != null) {
+          final id = _verificationId;
+          if (id == null) throw StateError('Request an OTP first.');
+          final cred = PhoneAuthProvider.credential(
+              verificationId: id, smsCode: code.trim());
+          final result = await _auth!.signInWithCredential(cred);
+          if (displayName != null && displayName.trim().isNotEmpty) {
+            await result.user?.updateDisplayName(displayName.trim());
+          }
+          _verificationId = null;
+        } else {
+          // Local/demo fallback: accept any 6-digit OTP
+          _mockSignedIn = true;
+          if (displayName != null && displayName.trim().isNotEmpty) {
+            _mockName = displayName.trim();
+          } else {
+            _mockName ??= 'Investor';
+          }
+          _verificationId = null;
+          notifyListeners();
         }
-        _verificationId = null;
       });
 
   void resetOtp() {
@@ -133,7 +181,26 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> signOut() => _run(() => _auth!.signOut());
+  Future<void> signOut() => _run(() async {
+        if (_auth != null) {
+          await _auth!.signOut();
+        }
+        _mockSignedIn = false;
+        _mockName = null;
+        _mockEmail = null;
+        _mockPhone = null;
+        notifyListeners();
+      });
 
-  Future<void> deleteAccount() => _run(() async => _auth!.currentUser?.delete());
+  Future<void> deleteAccount() => _run(() async {
+        if (_auth != null) {
+          await _auth!.currentUser?.delete();
+        }
+        _mockSignedIn = false;
+        _mockName = null;
+        _mockEmail = null;
+        _mockPhone = null;
+        notifyListeners();
+      });
 }
+

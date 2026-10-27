@@ -196,7 +196,6 @@ class DashboardScreen extends StatelessWidget {
         actions: [
           Builder(builder: (context) {
             final auth = context.watch<AuthService>();
-            if (!auth.isAvailable) return const SizedBox.shrink();
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: GestureDetector(
@@ -206,6 +205,7 @@ class DashboardScreen extends StatelessWidget {
                     builder: (_) => auth.isSignedIn ? const SettingsScreen() : const AuthScreen(),
                   ),
                 ),
+
                 child: Container(
                   width: 36,
                   height: 36,

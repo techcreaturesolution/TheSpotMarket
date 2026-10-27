@@ -1,0 +1,127 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/800.css';
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import '@fontsource/roboto/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: #040A07;
+  }
+
+  body {
+    background-color: #040A07;
+    color: #FFFFFF;
+    font-family: 'Inter', 'Roboto', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Emerald text selection color */
+  ::selection {
+    background-color: rgba(16, 185, 129, 0.35);
+    color: #FFFFFF;
+  }
+
+  /* Sleek dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #040A07;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #0C1610;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #10B981;
+  }
+
+  /* Headings typography standard */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+}
+
+@layer utilities {
+  /* Emerald radial glow utility layers */
+  .bg-radial-glow {
+    background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.18) 0%, rgba(4, 10, 7, 0) 70%);
+  }
+
+  .bg-radial-glow-center {
+    background: radial-gradient(circle at center, rgba(16, 185, 129, 0.14) 0%, rgba(4, 10, 7, 0) 75%);
+  }
+
+  .glow-emerald-ambient {
+    position: relative;
+  }
+
+  .glow-emerald-ambient::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 480px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.16) 0%, rgba(4, 10, 7, 0) 70%);
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 24px rgba(16, 185, 129, 0.4);
+  }
+
+  /* Faint background grid for modern dark fintech look */
+  .bg-grid-faint {
+    background-size: 40px 40px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  }
+
+  /* Deep emerald hero backdrop with multiple layered radial glows */
+  .bg-hero-atmosphere {
+    background: 
+      radial-gradient(circle at 50% 10%, rgba(16, 185, 129, 0.18) 0%, transparent 60%),
+      radial-gradient(circle at 80% 30%, rgba(52, 211, 153, 0.10) 0%, transparent 50%),
+      radial-gradient(circle at 20% 50%, rgba(5, 150, 105, 0.08) 0%, transparent 50%),
+      #040A07;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     CSS GPU & HARDWARE ACCELERATION (Smooth 60/120 FPS Rendering)
+     ═══════════════════════════════════════════════════════════════════ */
+  .gpu-accelerated,
+  .will-change-transform {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000px;
+  }
+}

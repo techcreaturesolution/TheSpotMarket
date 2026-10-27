@@ -10,6 +10,7 @@
 TheSpotMarket/
 ├── flutter_mobile/        # Flutter Android & iOS mobile client application
 ├── backend/               # Node.js Express REST API backend (SmartAPI + IndianAPI + SpotAI)
+├── frontend/              # React 18 + Vite + Tailwind + GSAP public marketing site
 ├── docs/                  # Comprehensive documentation, security audits & phase reports
 └── archive/               # Reference tools (Indian-Stock-Market-API) & test captures
 ```

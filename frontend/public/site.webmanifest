@@ -1,0 +1,25 @@
+{
+  "name": "TheSpotMarket - Live Indian IPO GMP & Market Intel",
+  "short_name": "TheSpotMarket",
+  "description": "Track real-time Indian Mainline & SME IPO subscriptions, live Grey Market Premiums (GMP), NSE/BSE stock movements, and analyze SEBI DRHP filings with SpotAI.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#040A07",
+  "theme_color": "#040A07",
+  "categories": ["finance", "business"],
+  "icons": [
+    {
+      "src": "/images/app_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

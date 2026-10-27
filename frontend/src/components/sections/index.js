@@ -1,0 +1,13 @@
+export { HeroSection } from './HeroSection';
+export { PhoneMockup } from './PhoneMockup';
+export { MarketTicker } from './MarketTicker';
+export { StatsRow } from './StatsRow';
+export { FeaturesGrid } from './FeaturesGrid';
+export { HowItWorksSection } from './HowItWorksSection';
+export { SpotAiSection } from './SpotAiSection';
+export { IpoShowcaseSection } from './IpoShowcaseSection';
+export { WhySpotMarketSection } from './WhySpotMarketSection';
+export { ScreenshotsSection } from './ScreenshotsSection';
+export { FaqAccordionSection } from './FaqAccordionSection';
+export { FinalCtaBanner } from './FinalCtaBanner';
+export { AboutStoryTimeline } from './AboutStoryTimeline';

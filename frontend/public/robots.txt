@@ -1,0 +1,13 @@
+# https://thespotmarket.com/robots.txt
+# Robots exclusion file for TheSpotMarket search engine crawlers
+
+User-agent: *
+Allow: /
+
+# Disallow internal or API endpoints if applicable
+Disallow: /api/
+Disallow: /admin/
+
+# Host and Sitemap
+Host: https://thespotmarket.com
+Sitemap: https://thespotmarket.com/sitemap.xml

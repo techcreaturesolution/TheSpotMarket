@@ -69,8 +69,16 @@ const aiLimiter = createRateLimiter({
   message: 'AI request limit exceeded. Please wait a minute before sending more queries.'
 });
 
+// Dedicated Contact Submission Limiter: 5 requests / 15 min / IP to prevent spam & mail floods
+const contactLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per 15 min per IP
+  message: 'Too many contact submissions from this IP. Please wait 15 minutes before submitting again.'
+});
+
 module.exports = {
   createRateLimiter,
   generalLimiter,
-  aiLimiter
+  aiLimiter,
+  contactLimiter
 };

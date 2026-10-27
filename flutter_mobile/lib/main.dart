@@ -19,10 +19,16 @@ Future<void> main() async {
   // Firebase is optional: when unconfigured or on desktop the app runs in guest mode.
   var firebaseReady = false;
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    firebaseReady = true;
+    if (DefaultFirebaseOptions.areConfigured) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      firebaseReady = true;
+    } else {
+      // Fallback: try default platform initialization (e.g. if google-services.json is present)
+      await Firebase.initializeApp();
+      firebaseReady = true;
+    }
   } catch (e) {
     debugPrint('Firebase not configured: $e');
   }
@@ -182,8 +188,8 @@ class TheSpotMarketApp extends StatelessWidget {
   }
 }
 
-/// Shows the login screen once (skippable) when Firebase is configured and
-/// the user is not signed in; otherwise goes straight to the app.
+/// Shows the login screen once (skippable) when the user is not signed in;
+/// otherwise goes straight to the main app shell.
 class _Gate extends StatefulWidget {
   const _Gate();
 
@@ -197,7 +203,7 @@ class _GateState extends State<_Gate> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
-    if (auth.isAvailable && !auth.isSignedIn && !_skipped) {
+    if (!auth.isSignedIn && !_skipped) {
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) => setState(() => _skipped = true),
@@ -207,3 +213,4 @@ class _GateState extends State<_Gate> {
     return const HomeShell();
   }
 }
+

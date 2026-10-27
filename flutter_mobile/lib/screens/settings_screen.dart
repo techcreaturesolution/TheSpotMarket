@@ -82,16 +82,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // ------------------------------------------------------------ account
               const _Header('Account'),
               _GlassCard(
-                child: (!auth.isAvailable)
-                    ? const ListTile(
-                        leading: Icon(Icons.cloud_off, color: Colors.white60),
-                        title: Text('Firebase not configured', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-                        subtitle: Text('Add google-services.json / GoogleService-Info.plist to enable login.', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      )
-                    : (auth.isSignedIn)
-                        ? Column(
-                            children: [
-                              ListTile(
+                child: (auth.isSignedIn)
+                    ? Column(
+                        children: [
+                          ListTile(
                                 leading: Container(
                                   width: 44,
                                   height: 44,

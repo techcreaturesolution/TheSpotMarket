@@ -11,7 +11,14 @@ const env = {
   ANGEL_CLIENT_ID: process.env.ANGEL_CLIENT_ID || '',
   ANGEL_PASSWORD: process.env.ANGEL_PASSWORD || '',
   ANGEL_TOTP_SECRET: process.env.ANGEL_TOTP_SECRET || '',
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.AI_API_KEY || ''
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.AI_API_KEY || '',
+  // SMTP Email Delivery Configuration
+  SMTP_HOST: process.env.SMTP_HOST || '',
+  SMTP_PORT: parseInt(process.env.SMTP_PORT, 10) || 587,
+  SMTP_SECURE: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+  SMTP_USER: process.env.SMTP_USER || '',
+  SMTP_PASS: process.env.SMTP_PASS || '',
+  CONTACT_TO_EMAIL: process.env.CONTACT_TO_EMAIL || 'support@thespotmarket.com'
 };
 
 module.exports = env;
