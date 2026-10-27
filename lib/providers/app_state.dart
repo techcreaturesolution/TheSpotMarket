@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
+import '../config/app_config.dart';
 import '../models/models.dart';
 import '../services/ai_service.dart';
 import '../services/allotment_service.dart';
@@ -31,10 +32,12 @@ class AppState extends ChangeNotifier {
     _watchlist = storage.loadWatchlist();
     _darkMode = storage.darkMode;
     _chat = storage.loadChat();
-    final key = storage.aiApiKey;
-    if (key != null && key.isNotEmpty) this.ai.apiKey = key;
     final provider = storage.aiProvider;
-    if (provider != null) this.ai.provider = provider;
+    if (provider != null && provider.isNotEmpty) {
+      this.ai.provider = provider;
+    } else if (AppConfig.aiProvider.isNotEmpty) {
+      this.ai.provider = AppConfig.aiProvider;
+    }
   }
 
   final StorageService storage;
@@ -626,11 +629,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setAiConfig({required String provider, required String apiKey}) async {
+  Future<void> setAiConfig({required String provider, String? apiKey}) async {
     ai.provider = provider;
-    ai.apiKey = apiKey;
     await storage.setAiProvider(provider);
-    await storage.setAiApiKey(apiKey);
     _brief = null;
     notifyListeners();
   }

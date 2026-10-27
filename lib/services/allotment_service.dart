@@ -92,6 +92,15 @@ class AllotmentService {
     }
   }
 
+  /// Safely generates the PAN autofill script only if the destination URL is verified.
+  /// If currentUrl is untrusted or missing, returns empty string to fail closed.
+  static String generateAutofillScript(String pan, {String? currentUrl}) {
+    if (!isTrustedRegistrarUrl(currentUrl)) {
+      return '';
+    }
+    return prefillScript(pan);
+  }
+
   /// Best-effort JS that fills the first PAN-looking input on a registrar page.
   static String prefillScript(String pan) => '''
 (function(){
@@ -115,6 +124,48 @@ class AllotmentService {
   if (panRadio) { panRadio.click(); }
 })();
 ''';
+
+  static const Set<String> trustedRegistrarDomains = {
+    'linkintime.co.in',
+    'kfintech.com',
+    'bigshareonline.com',
+    'cameoindia.com',
+    'skylinerta.com',
+    'maashitla.com',
+    'purvashare.com',
+    'bseindia.com',
+    'nseindia.com',
+    'alankit.com',
+    'masserv.com',
+  };
+
+  /// Strict URL validator to protect PAN data from SSRF / open redirects in WebView:
+  /// 1. Must use HTTPS scheme.
+  /// 2. Hostname must exactly match an approved domain or an approved subdomain (e.g. `*.kfintech.com`).
+  /// 3. Rejects userinfo, lookalike domains (e.g. `evil-linkintime.co.in`), and non-HTTPS schemes.
+  static bool isTrustedRegistrarUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) return false;
+    final uri = Uri.tryParse(rawUrl.trim());
+    if (uri == null) return false;
+
+    // Strict HTTPS required
+    if (uri.scheme.toLowerCase() != 'https') return false;
+
+    final host = uri.host.toLowerCase().trim();
+    if (host.isEmpty) return false;
+
+    // Reject raw IPv4/IPv6 addresses
+    if (RegExp(r'^\d+\.\d+\.\d+\.\d+$').hasMatch(host) || host.contains(':')) {
+      return false;
+    }
+
+    for (final trusted in trustedRegistrarDomains) {
+      if (host == trusted || host.endsWith('.$trusted')) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   static Registrar? registrarFor(Ipo ipo) {
     final name = ipo.registrar.toLowerCase();

@@ -99,12 +99,12 @@ class _MarketHeaderSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Row(children: [
-        const Text('Market mood: ', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Text('Market mood: ', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13)),
         SentimentChip(mood),
         const Spacer(),
         if (fetchedAt != null)
           Text('Updated ${DateFormat.jm().format(fetchedAt)}',
-              style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline)),
+              style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.5))),
       ]),
     );
   }
@@ -221,20 +221,58 @@ class StockTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = gainColor(context, quote.isUp);
-    return ListTile(
-      dense: true,
-      leading: CircleAvatar(
-        backgroundColor: c.withValues(alpha: .12),
-        child: Text(quote.symbol.substring(0, quote.symbol.length.clamp(0, 2)),
-            style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 12)),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.9,
+        ),
       ),
-      title: Text(quote.symbol, style: const TextStyle(fontWeight: FontWeight.w700)),
-      subtitle: Text(quote.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-        Text(priceFmt(quote), style: const TextStyle(fontWeight: FontWeight.w700)),
-        Text('${quote.isUp ? '+' : ''}${quote.changePct.toStringAsFixed(2)}%',
-            style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12)),
-      ]),
+      child: ListTile(
+        dense: true,
+        leading: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: c.withValues(alpha: 0.14),
+            border: Border.all(color: c.withValues(alpha: 0.35), width: 1),
+          ),
+          child: Center(
+            child: Text(
+              quote.symbol.substring(0, quote.symbol.length.clamp(0, 2)),
+              style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 12),
+            ),
+          ),
+        ),
+        title: Text(
+          quote.symbol,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: Colors.white),
+        ),
+        subtitle: Text(
+          quote.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.6)),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              priceFmt(quote),
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+            ),
+            Text(
+              '${quote.isUp ? '+' : ''}${quote.changePct.toStringAsFixed(2)}%',
+              style: TextStyle(color: c, fontWeight: FontWeight.w700, fontSize: 11.5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

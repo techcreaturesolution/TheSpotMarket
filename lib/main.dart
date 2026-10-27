@@ -44,16 +44,13 @@ class TheSpotMarketApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => AppState(storage: storage)),
           ChangeNotifierProvider(create: (_) => AuthService(isAvailable: firebaseReady)),
         ],
-        child: Selector<AppState, bool>(
-          selector: (_, s) => s.darkMode,
-          builder: (context, isDark, _) => MaterialApp(
-            title: AppConfig.appName,
-            debugShowCheckedModeBanner: false,
-            themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-            theme: _theme(Brightness.light),
-            darkTheme: _theme(Brightness.dark),
-            home: const _Gate(),
-          ),
+        child: MaterialApp(
+          title: AppConfig.appName,
+          debugShowCheckedModeBanner: false,
+          themeMode: ThemeMode.dark,
+          theme: _theme(Brightness.dark),
+          darkTheme: _theme(Brightness.dark),
+          home: const _Gate(),
         ),
       );
 
@@ -62,12 +59,12 @@ class TheSpotMarketApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       brightness: b,
-      scaffoldBackgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
+      scaffoldBackgroundColor: isDark ? const Color(0xFF040A07) : const Color(0xFFF8FAFC),
       colorScheme: isDark
           ? const ColorScheme.dark(
               primary: Color(0xFF10B981),
               secondary: Color(0xFF059669),
-              surface: Color(0xFF111827),
+              surface: Color(0xFF0C1610),
               outline: Color(0xFF4B5563),
             )
           : const ColorScheme.light(
@@ -77,13 +74,13 @@ class TheSpotMarketApp extends StatelessWidget {
               outline: Color(0xFF94A3B8),
             ),
       cardTheme: CardThemeData(
-        color: isDark ? const Color(0xFF111827) : Colors.white,
+        color: isDark ? const Color(0xFF0B1711) : Colors.white,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+            color: isDark ? Colors.white.withValues(alpha: 0.10) : const Color(0xFFE2E8F0),
             width: 1,
           ),
         ),

@@ -58,7 +58,7 @@ class GlobalMarketService {
   Future<GlobalSnapshot> _fromBackend() async {
     final res = await _client
         .get(Uri.parse('${AppConfig.backendBaseUrl}/global/snapshot'))
-        .timeout(const Duration(seconds: 2));
+        .timeout(const Duration(seconds: 30));
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
     final dynamic j = jsonDecode(res.body);
     if (j is! Map<String, dynamic>) throw Exception('Invalid JSON response');
@@ -78,7 +78,7 @@ class GlobalMarketService {
               .map(StockQuote.fromJson)
               .toList()
           : const [],
-      isLive: true,
+      isLive: j['isLive'] == true,
       fetchedAt: DateTime.now(),
     );
   }

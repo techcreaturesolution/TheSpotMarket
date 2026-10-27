@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -101,12 +102,14 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: IndexedStack(index: _index, children: _tabs),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'spotai',
-          onPressed: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const AiChatScreen())),
-          icon: const Icon(Icons.auto_awesome),
-          label: const Text('SpotAI'),
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: _LiquidGlassFab(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AiChatScreen()),
+            ),
+          ),
         ),
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
@@ -138,36 +141,177 @@ class DashboardScreen extends StatelessWidget {
     final hasData = context.select<AppState, bool>((s) => s.hasDashboardData);
 
     return Scaffold(
+      backgroundColor: const Color(0xFF040A07),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(AppConfig.appName),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              color: const Color(0xFF040A07).withValues(alpha: 0.72),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            const Text(
+              AppConfig.appName,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                letterSpacing: -0.4,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF10B981),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.9),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           Builder(builder: (context) {
             final auth = context.watch<AuthService>();
             if (!auth.isAvailable) return const SizedBox.shrink();
-            return IconButton(
-              tooltip: auth.isSignedIn ? auth.displayName : 'Sign in',
-              icon: auth.isSignedIn
-                  ? CircleAvatar(radius: 14, child: Text(auth.displayName[0].toUpperCase(), style: const TextStyle(fontSize: 13)))
-                  : const Icon(Icons.account_circle_outlined),
-              onPressed: () => Navigator.push(
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => auth.isSignedIn ? const SettingsScreen() : const AuthScreen())),
+                    builder: (_) => auth.isSignedIn ? const SettingsScreen() : const AuthScreen(),
+                  ),
+                ),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.16),
+                        Colors.white.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.55),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: auth.isSignedIn
+                        ? Text(
+                            auth.displayName[0].toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF34D399),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          )
+                        : const Icon(Icons.person_outline_rounded, color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
             );
           }),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.06),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    width: 1,
+                  ),
+                ),
+                child: const Icon(Icons.settings_outlined, color: Colors.white, size: 18),
+              ),
+            ),
           ),
         ],
       ),
-      // Use context.read so the scaffold itself doesn't rebuild every second.
-      body: RefreshIndicator(
-        onRefresh: context.read<AppState>().refreshAll,
-        child: (isInitialLoading && !hasData)
-            ? const DashboardLoadingSkeleton()
-            : const _DashboardBody(),
+      body: Stack(
+        children: [
+          // Ambient Liquid Blooms
+          Positioned(
+            top: 40,
+            left: -40,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF10B981).withValues(alpha: 0.14),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 320,
+            right: -60,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF059669).withValues(alpha: 0.10),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          RefreshIndicator(
+            onRefresh: context.read<AppState>().refreshAll,
+            child: (isInitialLoading && !hasData)
+                ? const DashboardLoadingSkeleton()
+                : const _DashboardBody(),
+          ),
+        ],
       ),
     );
   }
@@ -180,8 +324,9 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top + kToolbarHeight + 6;
     return ListView(
-      padding: const EdgeInsets.only(bottom: 96),
+      padding: EdgeInsets.fromLTRB(0, topPad, 0, 96),
       children: const [
         _IndexStripSection(),
         _AiBriefCard(),
@@ -285,9 +430,15 @@ class _OpenIpoSection extends StatelessWidget {
               isLive: data.ipoIsLive,
             ),
             if (data.open.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text('No IPO is open for subscription right now.'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Text(
+                  'No IPO is open for subscription right now.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.60),
+                  ),
+                ),
               )
             else
               ...data.open.take(3).map((i) => IpoCard(ipo: i)),
@@ -523,9 +674,7 @@ class _LiveIndexCardState extends State<_LiveIndexCard> {
     if (oldWidget.index.last != widget.index.last) {
       final isUp = widget.index.last > oldWidget.index.last;
       setState(() {
-        _flashBorderColor = isUp
-            ? const Color(0xFF10B981)
-            : const Color(0xFFEF4444);
+        _flashBorderColor = isUp ? const Color(0xFF10B981) : const Color(0xFFEF4444);
       });
       Future.delayed(const Duration(milliseconds: 350), () {
         if (mounted) {
@@ -539,51 +688,87 @@ class _LiveIndexCardState extends State<_LiveIndexCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final idx = widget.index;
     final c = gainColor(context, idx.isUp);
+    final borderColor = _flashBorderColor ?? Colors.white.withValues(alpha: 0.14);
 
-    final defaultBorder = isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0);
-    final borderColor = _flashBorderColor ?? defaultBorder;
-    final cardBg = _flashBorderColor != null
-        ? _flashBorderColor!.withValues(alpha: isDark ? 0.2 : 0.1)
-        : (isDark ? const Color(0xFF111827) : Colors.white);
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      width: 152,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: borderColor,
-          width: _flashBorderColor != null ? 1.5 : 1.0,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          width: 158,
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                _flashBorderColor != null
+                    ? _flashBorderColor!.withValues(alpha: 0.20)
+                    : Colors.white.withValues(alpha: 0.09),
+                const Color(0xFF0C2016).withValues(alpha: 0.45),
+                const Color(0xFF030D08).withValues(alpha: 0.70),
+              ],
+              stops: const [0.0, 0.45, 1.0],
+            ),
+            border: Border.all(
+              color: borderColor,
+              width: _flashBorderColor != null ? 1.5 : 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.30),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      idx.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5, color: Colors.white),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 0.8),
+                    ),
+                    child: Text(
+                      idx.exchange,
+                      style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.8)),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  LiveDot(isLive: widget.isLive),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                num2.format(idx.last),
+                style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.3),
+              ),
+              Text(
+                '${idx.isUp ? '+' : ''}${num2.format(idx.change)} (${idx.isUp ? '+' : ''}${idx.changePct.toStringAsFixed(2)}%)',
+                style: TextStyle(color: c, fontWeight: FontWeight.w700, fontSize: 11),
+              ),
+              if (idx.sparkline.isNotEmpty)
+                Expanded(child: Sparkline(idx.sparkline, up: idx.isUp, height: 20)),
+            ],
+          ),
         ),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-            child: Text(idx.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
-          ),
-          Text(idx.exchange,
-              style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.outline)),
-          const SizedBox(width: 4),
-          LiveDot(isLive: widget.isLive),
-        ]),
-        const SizedBox(height: 2),
-        Text(num2.format(idx.last),
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-        Text(
-          '${idx.isUp ? '+' : ''}${num2.format(idx.change)} (${idx.isUp ? '+' : ''}${idx.changePct.toStringAsFixed(2)}%)',
-          style: TextStyle(color: c, fontWeight: FontWeight.w700, fontSize: 11),
-        ),
-        if (idx.sparkline.isNotEmpty)
-          Expanded(child: Sparkline(idx.sparkline, up: idx.isUp, height: 20)),
-      ]),
     );
   }
 }
@@ -609,103 +794,281 @@ class _AiBriefCard extends StatelessWidget {
           prev.isCfg != next.isCfg ||
           prev.canGen != next.canGen,
       builder: (ctx, data, __) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return Container(
-          margin: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: (isDark ? Colors.black : const Color(0xFF0F172A)).withValues(alpha: .15),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 16),
-              const SizedBox(width: 6),
-              const Text(
-                'SpotAI Market Brief',
-                style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13),
-              ),
-              const Spacer(),
-              SentimentChip(data.mood, compact: true),
-            ]),
-            const SizedBox(height: 6),
-            if (data.brief != null)
-              Text(data.brief!, style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.3))
-            else if (data.briefLoading)
-              const LinearProgressIndicator()
-            else
-              Row(children: [
-                Expanded(
-                  child: Text(
-                    data.isCfg
-                        ? 'Generate a live AI summary of today\'s market.'
-                        : 'Get an on-device market summary.',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+          margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF10B981).withValues(alpha: 0.14),
+                      const Color(0xFF092216).withValues(alpha: 0.40),
+                      const Color(0xFF03140C).withValues(alpha: 0.65),
+                    ],
+                    stops: const [0.0, 0.45, 1.0],
                   ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 30,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  border: Border.all(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.32),
+                    width: 1.1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 3),
                     ),
-                    onPressed: data.canGen ? ctx.read<AppState>().loadBrief : null,
-                    child: const Text('Generate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                  ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ]),
-          ]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF10B981).withValues(alpha: 0.20),
+                            border: Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.45), width: 1),
+                          ),
+                          child: const Icon(Icons.auto_awesome, color: Color(0xFF34D399), size: 14),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'SpotAI Market Brief',
+                          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13.5),
+                        ),
+                        const Spacer(),
+                        SentimentChip(data.mood, compact: true),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (data.brief != null)
+                      Text(data.brief!, style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.35))
+                    else if (data.briefLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 4),
+                        child: LinearProgressIndicator(
+                          backgroundColor: Colors.white12,
+                          color: Color(0xFF10B981),
+                        ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              data.isCfg
+                                  ? 'Generate a live AI summary of today\'s market.'
+                                  : 'Get an on-device market summary.',
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.70), fontSize: 11.5),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          GestureDetector(
+                            onTap: data.canGen ? ctx.read<AppState>().loadBrief : null,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF34D399),
+                                    Color(0xFF10B981),
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.40),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                'Generate',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF042013),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
   }
 }
 
-
 class _UpcomingTile extends StatelessWidget {
   const _UpcomingTile({required this.ipo});
   final Ipo ipo;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: () => openIpo(context, ipo),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 190,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Theme.of(context).dividerColor),
-            borderRadius: BorderRadius.circular(14),
+  Widget build(BuildContext context) => Container(
+        width: 196,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.09),
+              const Color(0xFF0C2016).withValues(alpha: 0.40),
+              const Color(0xFF030D08).withValues(alpha: 0.70),
+            ],
+            stops: const [0.0, 0.45, 1.0],
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                child: Text(ipo.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.30),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => openIpo(context, ipo),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          ipo.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                        ),
+                      ),
+                      if (ipo.isSme)
+                        Container(
+                          margin: const EdgeInsets.only(left: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3), width: 0.8),
+                          ),
+                          child: const Text('SME', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF34D399))),
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Opens ${ipo.openDate != null ? dateFmt.format(ipo.openDate!) : 'TBA'} · Closes ${ipo.closeDate != null ? dateFmt.format(ipo.closeDate!) : 'TBA'}',
+                    style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.55)),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    ipo.priceMin > 0 ? "${inr.format(ipo.priceMin)} – ${inr.format(ipo.priceMax)}" : "TBA",
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                  ),
+                  Text(
+                    'Lot ${ipo.lotSize ?? "—"} · ${ipo.issueSizeCr > 0 ? "${inr.format(ipo.issueSizeCr)} Cr" : "—"}',
+                    style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.65)),
+                  ),
+                ],
               ),
-              if (ipo.isSme)
-                const Padding(padding: EdgeInsets.only(left: 4), child: Chip(label: Text('SME', style: TextStyle(fontSize: 10)), padding: EdgeInsets.zero, visualDensity: VisualDensity.compact)),
-            ]),
-            const Spacer(),
-            Text('Opens ${ipo.openDate != null ? dateFmt.format(ipo.openDate!) : 'TBA'} · Closes ${ipo.closeDate != null ? dateFmt.format(ipo.closeDate!) : 'TBA'}',
-                style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline)),
-            const SizedBox(height: 4),
-            Text(ipo.priceMin > 0 ? "${inr.format(ipo.priceMin)} – ${inr.format(ipo.priceMax)}" : "TBA",
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text('Lot ${ipo.lotSize ?? "—"} · ${ipo.issueSizeCr > 0 ? "${inr.format(ipo.issueSizeCr)} Cr" : "—"}', style: const TextStyle(fontSize: 11)),
-          ]),
+            ),
+          ),
         ),
       );
 }
+
+// ==============================================================================
+// Liquid Glass Floating Action Button (SpotAI)
+// ==============================================================================
+class _LiquidGlassFab extends StatelessWidget {
+  const _LiquidGlassFab({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 42,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(21),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF6EE7B7), // Mint green highlight
+            Color(0xFF10B981), // Core Emerald
+            Color(0xFF059669), // Rich green base
+          ],
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withValues(alpha: 0.45),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(21),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(Icons.auto_awesome, color: Color(0xFF032213), size: 16.5),
+                SizedBox(width: 6.5),
+                Text(
+                  'SpotAI',
+                  style: TextStyle(
+                    color: Color(0xFF032213),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

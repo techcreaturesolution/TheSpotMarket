@@ -173,22 +173,40 @@ class IpoCard extends StatelessWidget {
     final gain = ipo.expectedListingGainPct;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: isDark ? 0.09 : 0.7),
+            const Color(0xFF0C2016).withValues(alpha: isDark ? 0.40 : 0.4),
+            const Color(0xFF030D08).withValues(alpha: isDark ? 0.70 : 0.05),
+          ],
+          stops: const [0.0, 0.45, 1.0],
+        ),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () => openIpo(context, ipo),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => openIpo(context, ipo),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header Row: Title, Exchange/Sector & Status Badge
@@ -316,7 +334,8 @@ class IpoCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

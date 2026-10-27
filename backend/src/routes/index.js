@@ -4,7 +4,7 @@ const router = express.Router();
 const ipoRoutes = require('./ipo.routes');
 const marketRoutes = require('./market.routes');
 const globalRoutes = require('./global.routes');
-const testRoutes = require('./test.routes');
+const aiRoutes = require('./ai.routes');
 
 // Health Check
 router.get(['/api/health', '/health'], (req, res) => {
@@ -18,6 +18,6 @@ router.get(['/api/health', '/health'], (req, res) => {
 router.use('/', ipoRoutes);
 router.use('/', marketRoutes);
 router.use('/', globalRoutes);
-router.use('/', testRoutes);
+router.use('/', aiRoutes);
 
 module.exports = router;

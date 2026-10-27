@@ -46,16 +46,10 @@ async function getAllIpos(req, res) {
   return res.json(resp);
 }
 
-function trigger401Test(req, res) {
-  const result = ipoService.triggerCooldownTest();
-  return res.json(result);
-}
-
 module.exports = {
   getOpenIpos,
   getUpcomingIpos,
   getClosedIpos,
   getListedIpos,
-  getAllIpos,
-  trigger401Test
+  getAllIpos
 };

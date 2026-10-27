@@ -10,7 +10,8 @@ const env = {
   ANGEL_API_KEY: process.env.ANGEL_API_KEY || '',
   ANGEL_CLIENT_ID: process.env.ANGEL_CLIENT_ID || '',
   ANGEL_PASSWORD: process.env.ANGEL_PASSWORD || '',
-  ANGEL_TOTP_SECRET: process.env.ANGEL_TOTP_SECRET || ''
+  ANGEL_TOTP_SECRET: process.env.ANGEL_TOTP_SECRET || '',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || process.env.AI_API_KEY || ''
 };
 
 module.exports = env;

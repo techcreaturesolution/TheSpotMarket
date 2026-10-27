@@ -33,11 +33,19 @@ class GlobalMarketScreen extends StatelessWidget {
             if (hasSnap) LiveBadge(live: isLive),
           ]),
           actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: loadGlobal)],
-          bottom: const TabBar(tabs: [
-            Tab(text: 'Indices'),
-            Tab(text: 'Buy / Sell'),
-            Tab(text: 'News'),
-          ]),
+          bottom: const TabBar(
+            indicatorColor: Color(0xFF10B981),
+            indicatorWeight: 3,
+            labelColor: Color(0xFF34D399),
+            unselectedLabelColor: Colors.white60,
+            labelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+            unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13.5),
+            tabs: [
+              Tab(text: 'Indices'),
+              Tab(text: 'Buy / Sell'),
+              Tab(text: 'News'),
+            ],
+          ),
         ),
         body: globalLoading
             ? const Center(child: CircularProgressIndicator())
@@ -119,12 +127,12 @@ class _GlobalIndicesTabState extends State<_GlobalIndicesTab>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(children: [
-              const Text('Global mood: ', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Global mood: ', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13)),
               SentimentChip(globalMood),
               const Spacer(),
               if (snap != null)
                 Text('Updated ${DateFormat.jm().format(snap.fetchedAt)}',
-                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline)),
+                    style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.5))),
             ]),
           ),
           for (final e in groups.entries) ...[

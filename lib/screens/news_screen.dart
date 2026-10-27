@@ -57,40 +57,85 @@ class _NewsScreenState extends State<NewsScreen> {
               preferredSize: const Size.fromHeight(100),
               child: Column(children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-                  child: SizedBox(
-                    height: 38,
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withValues(alpha: 0.06),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        width: 1,
+                      ),
+                    ),
                     child: TextField(
-                      style: const TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: 13, color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'Search BSE, NSE, IPO, stocks…',
-                        hintStyle: const TextStyle(fontSize: 12),
-                        prefixIcon: const Icon(Icons.search, size: 18),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                        hintStyle: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.45)),
+                        prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF34D399)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
                         isDense: true,
-                        filled: true,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                        filled: false,
+                        border: InputBorder.none,
                       ),
                       onChanged: (v) => setState(() => _query = v),
                     ),
                   ),
                 ),
                 SizedBox(
-                  height: 34,
+                  height: 32,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     itemCount: _categories.length,
-                    separatorBuilder: (context, index) => const SizedBox(width: 6),
-                    itemBuilder: (_, i) => ChoiceChip(
-                      label: Text(_categories[i], style: const TextStyle(fontSize: 11)),
-                      selected: _category == _categories[i],
-                      visualDensity: VisualDensity.compact,
-                      onSelected: (_) => setState(() => _category = _categories[i]),
-                    ),
+                    separatorBuilder: (context, index) => const SizedBox(width: 8),
+                    itemBuilder: (_, i) {
+                      final cat = _categories[i];
+                      final isSel = _category == cat;
+                      return GestureDetector(
+                        onTap: () => setState(() => _category = cat),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: isSel
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF34D399), Color(0xFF10B981)],
+                                  )
+                                : null,
+                            color: isSel ? null : Colors.white.withValues(alpha: 0.05),
+                            border: Border.all(
+                              color: isSel ? const Color(0xFF34D399) : Colors.white.withValues(alpha: 0.10),
+                              width: 1,
+                            ),
+                            boxShadow: isSel
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              cat,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                                color: isSel ? const Color(0xFF042013) : Colors.white.withValues(alpha: 0.75),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
               ]),
             ),
           ),
@@ -159,82 +204,102 @@ class _NewsTileState extends State<NewsTile> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: isDark ? 0.08 : 0.7),
+            const Color(0xFF0C2016).withValues(alpha: isDark ? 0.40 : 0.4),
+            const Color(0xFF030D08).withValues(alpha: isDark ? 0.70 : 0.05),
+          ],
+          stops: const [0.0, 0.45, 1.0],
+        ),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          AdService.instance.recordDetailView();
-          launchUrl(Uri.parse(widget.article.link), mode: LaunchMode.inAppBrowserView);
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            if (widget.article.imageUrl != null && !widget.compact)
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: CachedNetworkImage(
-                    imageUrl: widget.article.imageUrl!,
-                    width: 64,
-                    height: 64,
-                    fit: BoxFit.cover,
-                    errorWidget: (context, url, error) => const SizedBox.shrink(),
-                  ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            AdService.instance.recordDetailView();
+            launchUrl(Uri.parse(widget.article.link), mode: LaunchMode.inAppBrowserView);
+          },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                    if (widget.article.imageUrl != null && !widget.compact)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: CachedNetworkImage(
+                            imageUrl: widget.article.imageUrl!,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                            errorWidget: (context, url, error) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: .15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: .3), width: 0.8),
+                            ),
+                            child: Text(
+                              widget.article.category,
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF34D399),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          SentimentChip(_sentiment, compact: true),
+                          const Spacer(),
+                          Text(
+                            timeAgo(widget.article.publishedAt),
+                            style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.outline),
+                          ),
+                        ]),
+                        const SizedBox(height: 5),
+                        Text(
+                          widget.article.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, height: 1.25),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          widget.article.source,
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.outline),
+                        ),
+                      ]),
+                    ),
+                  ]),
                 ),
               ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      widget.article.category,
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  SentimentChip(_sentiment, compact: true),
-                  const Spacer(),
-                  Text(
-                    timeAgo(widget.article.publishedAt),
-                    style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.outline),
-                  ),
-                ]),
-                const SizedBox(height: 4),
-                Text(
-                  widget.article.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, height: 1.25),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.article.source,
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.outline),
-                ),
-              ]),
             ),
-          ]),
-        ),
-      ),
-    );
+          );
   }
 }

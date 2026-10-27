@@ -3,27 +3,38 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 /// Central configuration. Values can be overridden at build time with
-/// `--dart-define=KEY=VALUE` so secrets never need to be committed.
+/// `--dart-define=KEY=VALUE` for environments and ad units.
 class AppConfig {
   AppConfig._();
 
   static const appName = 'TheSpotMarket';
   static const tagline = 'IPO, Stocks & Market Intelligence';
 
-  /// Optional backend that aggregates IPO / market data
-  /// (e.g. a small Node/Python API you host). When empty the app falls back
-  /// to public sources and bundled sample data.
-  static const backendBaseUrl =
-      String.fromEnvironment('BACKEND_URL', defaultValue: 'http://127.0.0.1:3000');
+  /// Production backend that aggregates market, IPO, and SpotAI intelligence.
+  static String _rawBackendBaseUrl = const String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: 'https://thespotmarket-1.onrender.com',
+  );
 
-  /// AI provider. Supported: `gemini` (default) or `openai`.
-  static const aiProvider =
-      String.fromEnvironment('AI_PROVIDER', defaultValue: 'gemini');
-  static const aiApiKey = String.fromEnvironment('AI_API_KEY', defaultValue: '');
-  static const geminiModel =
-      String.fromEnvironment('GEMINI_MODEL', defaultValue: 'gemini-1.5-flash');
-  static const openAiModel =
-      String.fromEnvironment('OPENAI_MODEL', defaultValue: 'gpt-4o-mini');
+  static String get backendBaseUrl {
+    final trimmed = _rawBackendBaseUrl.trim();
+    if (trimmed.endsWith('/')) {
+      return trimmed.substring(0, trimmed.length - 1);
+    }
+    return trimmed;
+  }
+
+  static set backendBaseUrl(String url) {
+    _rawBackendBaseUrl = url;
+  }
+
+  /// AI provider. Supported: `gemini` or `openai`. Managed server-side.
+  static String aiProvider =
+      const String.fromEnvironment('AI_PROVIDER', defaultValue: 'openai');
+  static String geminiModel =
+      const String.fromEnvironment('GEMINI_MODEL', defaultValue: 'gemini-1.5-flash');
+  static String openAiModel =
+      const String.fromEnvironment('OPENAI_MODEL', defaultValue: 'gpt-4o-mini');
 
   // ---------------------------------------------------------------------------
   // AdMob. Test IDs are used in debug builds; production IDs come from

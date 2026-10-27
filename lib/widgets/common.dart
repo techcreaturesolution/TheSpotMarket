@@ -184,25 +184,68 @@ class SectionHeader extends StatelessWidget {
   final bool? isLive;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
-        child: Row(
-          children: [
-            Text(title,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700)),
-            if (isLive != null) ...[
-              const SizedBox(width: 8),
-              LiveDot(isLive: isLive!, showLabel: true),
-            ],
-            const Spacer(),
-            if (action != null)
-              TextButton(onPressed: onAction, child: Text(action!)),
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 12, 6),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          if (isLive != null) ...[
+            const SizedBox(width: 8),
+            LiveDot(isLive: isLive!, showLabel: true),
           ],
-        ),
-      );
+          const Spacer(),
+          if (action != null)
+            GestureDetector(
+              onTap: onAction,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: isDark
+                      ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                      : const Color(0xFF059669).withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: isDark
+                        ? const Color(0xFF10B981).withValues(alpha: 0.28)
+                        : const Color(0xFF059669).withValues(alpha: 0.20),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      action!,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 14,
+                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class LiveBadge extends StatelessWidget {
@@ -370,18 +413,32 @@ class DetailedChartCard extends StatelessWidget {
         : points.reduce((a, b) => a > b ? a : b);
     final delta = (maxVal - minVal) == 0 ? 1.0 : (maxVal - minVal);
 
-    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFFAFAFA);
-
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-          width: 1,
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            const Color(0xFF0C2016).withValues(alpha: 0.40),
+            const Color(0xFF030D08).withValues(alpha: 0.70),
+          ],
+          stops: const [0.0, 0.45, 1.0],
         ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.30),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,7 +551,7 @@ class DetailedChartCard extends StatelessWidget {
                                 radius: 3,
                                 color: color,
                                 strokeWidth: 1.5,
-                                strokeColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                strokeColor: const Color(0xFF0C2016),
                               ),
                             ),
                             belowBarData: BarAreaData(
@@ -519,7 +576,7 @@ class DetailedChartCard extends StatelessWidget {
           ],
           if (stats.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Divider(height: 1, color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+            const Divider(height: 1, color: Colors.white12),
             const SizedBox(height: 6),
             Column(
               children: [
@@ -648,29 +705,45 @@ class SuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final q = s.quote;
     final c = gainColor(context, q.isUp);
-    final outline = Theme.of(context).colorScheme.outline;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE2E8F0),
-          width: 1,
+    final outline = Colors.white.withValues(alpha: 0.60);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            const Color(0xFF0C2016).withValues(alpha: 0.40),
+            const Color(0xFF030D08).withValues(alpha: 0.70),
+          ],
+          stops: const [0.0, 0.45, 1.0],
         ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.30),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             ActionChipLabel(s.action),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(q.symbol, style: const TextStyle(fontWeight: FontWeight.w800)),
+                Text(q.symbol, style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 13.5)),
                 Text(q.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: outline)),
+                    style: TextStyle(fontSize: 11.5, color: outline)),
               ]),
             ),
             if (q.sparkline.isNotEmpty) ...[
@@ -678,28 +751,31 @@ class SuggestionCard extends StatelessWidget {
               const SizedBox(width: 8),
             ],
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(priceFmt(q), style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(priceFmt(q), style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13)),
               Text('${q.isUp ? '+' : ''}${q.changePct.toStringAsFixed(2)}%',
-                  style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12)),
+                  style: TextStyle(color: c, fontWeight: FontWeight.w700, fontSize: 11.5)),
             ]),
           ]),
           const SizedBox(height: 10),
           Row(children: [
-            _Stat('Target', money(q.currency, s.target), Colors.green),
-            _Stat('Stop loss', money(q.currency, s.stopLoss), Colors.red),
+            _Stat('Target', money(q.currency, s.target), const Color(0xFF34D399)),
+            _Stat('Stop loss', money(q.currency, s.stopLoss), const Color(0xFFEF4444)),
             _Stat('Confidence', '${s.confidence}%', s.action.color),
           ]),
           const SizedBox(height: 8),
           ...s.reasons.take(3).map((r) => Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.only(top: 3),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Icon(Icons.circle, size: 6, color: outline),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Icon(Icons.circle, size: 5, color: const Color(0xFF10B981).withValues(alpha: 0.8)),
+                  ),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(r, style: const TextStyle(fontSize: 12))),
+                  Expanded(child: Text(r, style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.85)))),
                 ]),
               )),
-          const SizedBox(height: 4),
-          Text(s.horizon, style: TextStyle(fontSize: 11, color: outline)),
+          const SizedBox(height: 6),
+          Text(s.horizon, style: TextStyle(fontSize: 10.5, color: outline)),
         ]),
       ),
     );

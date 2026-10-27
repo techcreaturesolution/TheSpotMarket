@@ -93,7 +93,7 @@ class SuggestionStrip extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionHeader(title, action: 'See all', onAction: onSeeAll),
       SizedBox(
-        height: 108,
+        height: 112,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -103,36 +103,103 @@ class SuggestionStrip extends StatelessWidget {
             final p = picks[i];
             final q = p.quote;
             final c = gainColor(context, q.isUp);
-            return SizedBox(
-              width: 170,
-              child: Card(
-                margin: EdgeInsets.zero,
+            return Container(
+              width: 174,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.09),
+                    const Color(0xFF0C2016).withValues(alpha: 0.40),
+                    const Color(0xFF030D08).withValues(alpha: 0.70),
+                  ],
+                  stops: const [0.0, 0.45, 1.0],
+                ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.13),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.30),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
                 child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
                   onTap: onSeeAll,
                   child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        ActionChipLabel(p.action),
-                        const Spacer(),
-                        Text('${p.confidence}%', style: TextStyle(fontSize: 11, color: p.action.color, fontWeight: FontWeight.w700)),
-                      ]),
-                      const SizedBox(height: 6),
-                      Text(q.symbol, style: const TextStyle(fontWeight: FontWeight.w800)),
-                      Text(q.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
-                      const Spacer(),
-                      Row(children: [
-                        Text(priceFmt(q), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                        const Spacer(),
-                        Text('${q.isUp ? '+' : ''}${q.changePct.toStringAsFixed(1)}%',
-                            style: TextStyle(fontSize: 11, color: c, fontWeight: FontWeight.w700)),
-                      ]),
-                    ]),
-                  ),
-                ),
-              ),
-            );
-          },
+                    padding: const EdgeInsets.all(11),
+                    child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  ActionChipLabel(p.action),
+                                  const Spacer(),
+                                  Text(
+                                    '${p.confidence}%',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: p.action.color,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                q.symbol,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                q.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white.withValues(alpha: 0.65),
+                                ),
+                              ),
+                              const Spacer(),
+                              Row(
+                                children: [
+                                  Text(
+                                    priceFmt(q),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '${q.isUp ? '+' : ''}${q.changePct.toStringAsFixed(1)}%',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: c,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
         ),
       ),
     ]);

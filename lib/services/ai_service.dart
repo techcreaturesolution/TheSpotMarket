@@ -33,9 +33,8 @@ class AiService {
   final http.Client _client;
 
   String provider = AppConfig.aiProvider;
-  String apiKey = AppConfig.aiApiKey;
 
-  bool get isConfigured => apiKey.isNotEmpty;
+  bool get isConfigured => AppConfig.backendBaseUrl.isNotEmpty;
 
   static const systemPrompt = '''
 You are SpotAI, the in-app analyst for TheSpotMarket, an Indian stock market app.
@@ -46,72 +45,66 @@ asked for detail. Use INR (₹) and Indian market terminology (lot size, GMP, QI
 NII, retail quota, listing gains).''';
 
   // ---------------------------------------------------------------------------
-  // Chat
+  // Chat — All requests are proxied securely through the backend.
+  // No provider API keys reside on or are sent from the client.
   // ---------------------------------------------------------------------------
   Future<String> chat(List<ChatMessage> history, {String? context}) async {
-    if (!isConfigured) return _offlineReply(history.last.text);
-    final sys = context == null ? systemPrompt : '$systemPrompt\n\nLive context:\n$context';
-    return provider == 'openai'
-        ? _openAi(sys, history)
-        : _gemini(sys, history);
-  }
+    if (history.isEmpty) return _offlineReply('');
+    final question = history.last.text;
 
-  Future<String> _gemini(String system, List<ChatMessage> history) async {
-    final uri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/${AppConfig.geminiModel}:generateContent?key=$apiKey');
-    final res = await _client
-        .post(uri,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'system_instruction': {'parts': [{'text': system}]},
-              'contents': history
-                  .map((m) => {
-                        'role': m.isUser ? 'user' : 'model',
-                        'parts': [{'text': m.text}],
-                      })
-                  .toList(),
-              'generationConfig': {'temperature': 0.4, 'maxOutputTokens': 600},
-            }))
-        .timeout(const Duration(seconds: 30));
-    if (res.statusCode != 200) {
-      throw Exception('Gemini error ${res.statusCode}: ${res.body}');
-    }
-    final j = jsonDecode(res.body) as Map<String, dynamic>;
-    final parts = ((j['candidates'] as List).first['content']['parts'] as List);
-    return parts.map((p) => p['text'] as String? ?? '').join().trim();
-  }
+    if (!isConfigured) return _offlineReply(question);
 
-  Future<String> _openAi(String system, List<ChatMessage> history) async {
-    final res = await _client
-        .post(Uri.parse('https://api.openai.com/v1/chat/completions'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $apiKey',
-            },
-            body: jsonEncode({
-              'model': AppConfig.openAiModel,
-              'temperature': 0.4,
-              'max_tokens': 600,
-              'messages': [
-                {'role': 'system', 'content': system},
-                ...history.map((m) => {
-                      'role': m.isUser ? 'user' : 'assistant',
-                      'content': m.text,
-                    }),
-              ],
-            }))
-        .timeout(const Duration(seconds: 30));
-    if (res.statusCode != 200) {
-      throw Exception('OpenAI error ${res.statusCode}: ${res.body}');
+    final sys = context == null
+        ? systemPrompt
+        : '$systemPrompt\n\nLive context:\n$context';
+
+    final candidateUrls = [
+      '${AppConfig.backendBaseUrl}/api/ai/chat',
+      if (AppConfig.backendBaseUrl.contains('127.0.0.1') ||
+          AppConfig.backendBaseUrl.contains('localhost'))
+        'http://10.0.2.2:3000/api/ai/chat',
+    ];
+
+    for (final url in candidateUrls) {
+      try {
+        final res = await _client
+            .post(
+              Uri.parse(url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'system': sys,
+                'messages': history
+                    .map((m) => {
+                          'role': m.isUser ? 'user' : 'model',
+                          'text': m.text,
+                        })
+                    .toList(),
+              }),
+            )
+            .timeout(const Duration(seconds: 20));
+
+        if (res.statusCode == 200) {
+          final dynamic j = jsonDecode(res.body);
+          if (j is Map<String, dynamic>) {
+            final reply = j['text'] ?? j['reply'];
+            if (reply is String && reply.trim().isNotEmpty) {
+              return reply.trim();
+            }
+          }
+        }
+      } catch (_) {
+        // Backend candidate failed or timed out; try next candidate or fall back gracefully
+      }
     }
-    final j = jsonDecode(res.body) as Map<String, dynamic>;
-    return ((j['choices'] as List).first['message']['content'] as String).trim();
+
+    // Graceful offline fallback without exposing internal errors or throwing crashes
+    return _offlineReply(question);
   }
 
   String _offlineReply(String question) {
     final q = question.toLowerCase();
     if (q.contains('gmp')) {
-      return 'GMP (Grey Market Premium) is the unofficial price investors are willing to pay over the IPO issue price before listing. A high GMP hints at strong listing demand but it is unregulated and can change quickly.\n\nAdd an AI API key in Settings for live, personalised answers.\n\nNot SEBI-registered investment advice.';
+      return 'GMP (Grey Market Premium) is the unofficial price investors are willing to pay over the IPO issue price before listing. A high GMP hints at strong listing demand but it is unregulated and can change quickly.\n\nNot SEBI-registered investment advice.';
     }
     if (q.contains('allot')) {
       return 'IPO allotment for oversubscribed retail quotas is done by computerised lottery, so applying with multiple PANs (family members) at the cut-off price improves your household odds. Check status on the registrar site after the allotment date — use the Allotment tab here.\n\nNot SEBI-registered investment advice.';
@@ -119,7 +112,7 @@ NII, retail quota, listing gains).''';
     if (q.contains('lot')) {
       return 'A lot is the minimum number of shares you can apply for in an IPO. Retail investors can apply for up to ₹2 lakh worth of lots; bidding at the cut-off price maximises your chance of allotment.\n\nNot SEBI-registered investment advice.';
     }
-    return 'SpotAI is running in offline mode. Add a Gemini or OpenAI API key in Settings to chat about IPOs, NSE/BSE stocks and market news with live context.\n\nMeanwhile, the IPO Score and news sentiment shown across the app are computed on-device.\n\nNot SEBI-registered investment advice.';
+    return 'SpotAI is currently running in offline mode. Live market analysis requires the backend service.\n\nMeanwhile, the IPO Score and news sentiment shown across the app are computed on-device.\n\nNot SEBI-registered investment advice.';
   }
 
   // ---------------------------------------------------------------------------

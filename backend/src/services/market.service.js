@@ -25,10 +25,6 @@ async function performMarketFetch() {
 
     const res = await smart_api.marketData(payload);
 
-    console.log('\n[RAW ANGEL ONE API RESPONSE]');
-    console.log(JSON.stringify(res.data, null, 2));
-    console.log('==========================================\n');
-
     if (!res.status || !res.data || !res.data.fetched) {
       throw new Error('Failed to fetch market data from Angel One');
     }
@@ -41,10 +37,7 @@ async function performMarketFetch() {
     let losers = allStocks.filter(s => s.changePct < 0);
     losers.sort((a, b) => a.changePct - b.changePct);
 
-    console.log('\n[DEBUG - ANGEL ONE MARKET DATA]');
-    console.log(`Top ${gainers.length} Gainers:`, JSON.stringify(gainers, null, 2));
-    console.log(`Top ${losers.length} Losers:`, JSON.stringify(losers, null, 2));
-    console.log('==========================================\n');
+    console.log(`[MARKET_MOVERS] Angel One fetched=${res.data.fetched.length} gainers=${gainers.length} losers=${losers.length}`);
 
     return { gainers, losers };
   } catch (err) {

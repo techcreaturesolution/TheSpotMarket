@@ -43,19 +43,20 @@ class IpoService {
     final candidateUrls = [
       '${AppConfig.backendBaseUrl}/ipos',
       if (AppConfig.backendBaseUrl.contains('127.0.0.1') || AppConfig.backendBaseUrl.contains('localhost')) ...[
-        'http://192.168.29.254:3000/ipos',
         'http://10.0.2.2:3000/ipos',
       ]
     ];
 
     for (final uriStr in candidateUrls) {
       try {
-        final res = await _client.get(Uri.parse(uriStr)).timeout(const Duration(seconds: 4));
+        debugPrint('[IPO_SERVICE] Requesting IPO data from $uriStr');
+        final res = await _client.get(Uri.parse(uriStr)).timeout(const Duration(seconds: 30));
+        debugPrint('[IPO_SERVICE] Response code: ${res.statusCode}, bytes: ${res.bodyBytes.length}');
         
         if (res.statusCode == 200 || res.statusCode == 503) {
           final dynamic body = jsonDecode(res.body);
-          final bool isLive = body['isLive'] == true;
-          final String sourceStr = body['source']?.toString() ?? 'BACKEND';
+          final bool isLive = body is Map ? body['isLive'] == true : true;
+          final String sourceStr = body is Map ? (body['source']?.toString() ?? 'BACKEND') : 'BACKEND';
           
           MarketDataSource source = MarketDataSource.backend;
           if (sourceStr == 'IndianAPI') {
@@ -64,17 +65,26 @@ class IpoService {
             source = MarketDataSource.nse;
           }
           
-          final List rawList = body['data'] is List ? body['data'] as List : [];
+          final List rawList = body is List
+              ? body
+              : (body is Map && body['data'] is List)
+                  ? body['data'] as List
+                  : (body is Map && body['ipos'] is List)
+                      ? body['ipos'] as List
+                      : [];
           final ipos = <Ipo>[];
           final seenIds = <String>{};
           
           for (final item in rawList) {
             if (item is Map<String, dynamic>) {
-              // Note: we can trust the 'state' provided by the backend to map to Flutter's status
-              final ipo = Ipo.fromJson(item);
-              final key = ipo.id.isNotEmpty ? ipo.id : ipo.symbol;
-              if (key.isNotEmpty && seenIds.add(key.toLowerCase())) {
-                ipos.add(ipo);
+              try {
+                final ipo = Ipo.fromJson(item);
+                final key = ipo.id.isNotEmpty ? ipo.id : ipo.symbol;
+                if (key.isNotEmpty && seenIds.add(key.toLowerCase())) {
+                  ipos.add(ipo);
+                }
+              } catch (e) {
+                debugPrint('[IPO_SERVICE] Error parsing item ${item['symbol']}: $e');
               }
             }
           }
@@ -90,7 +100,9 @@ class IpoService {
             return feed;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[IPO_SERVICE] Error connecting to $uriStr: $e');
+      }
     }
 
     final fallbackFeed = IpoFeed(
@@ -103,16 +115,12 @@ class IpoService {
     return fallbackFeed;
   }
 
-
-
   void _logFeed(IpoFeed feed) {
     if (kDebugMode) {
       debugPrint(
           '[IPO_DATA] source=${feed.source.label} status=${feed.isLive ? "LIVE" : "DEMO"} count=${feed.ipos.length} fetchedAt=${feed.fetchedAt}');
     }
   }
-
-
 
   List<Ipo> _sorted(List<Ipo> list) {
     // 1. Deduplicate by unique id or symbol (case-insensitive)
@@ -136,7 +144,7 @@ class IpoService {
     unique.sort((a, b) {
       final statusA = a.statusOn(now);
       final statusB = b.statusOn(now);
-      final s = order[statusA]!.compareTo(order[statusB]!);
+      final s = (order[statusA] ?? 99).compareTo(order[statusB] ?? 99);
       if (s != 0) return s;
 
       // Within upcoming, sort by nearest openDate ascending

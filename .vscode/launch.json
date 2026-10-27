@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TheSpotMarket (with .env)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define-from-file=.env"
+      ]
+    },
+    {
+      "name": "TheSpotMarket (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "args": [
+        "--dart-define-from-file=.env"
+      ]
+    },
+    {
+      "name": "TheSpotMarket (Release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": [
+        "--dart-define-from-file=.env"
+      ]
+    }
+  ]
+}

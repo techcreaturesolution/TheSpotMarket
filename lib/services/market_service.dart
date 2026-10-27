@@ -202,7 +202,6 @@ class MarketService {
     final candidateUrls = [
       '${AppConfig.backendBaseUrl}/market/snapshot',
       if (AppConfig.backendBaseUrl.contains('127.0.0.1') || AppConfig.backendBaseUrl.contains('localhost')) ...[
-        'http://192.168.29.254:3000/market/snapshot',
         'http://10.0.2.2:3000/market/snapshot',
       ]
     ];
@@ -212,7 +211,7 @@ class MarketService {
       final uri = Uri.parse(uriStr);
       try {
         debugPrint('[MARKET_RUNTIME] Fetching from BACKEND. URL: $uriStr');
-        final res = await _client.get(uri).timeout(const Duration(seconds: 4));
+        final res = await _client.get(uri).timeout(const Duration(seconds: 30));
         
         debugPrint('[MARKET_RUNTIME] BACKEND status=${res.statusCode} response_bytes=${res.bodyBytes.length}');
         

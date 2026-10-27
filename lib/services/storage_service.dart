@@ -99,7 +99,7 @@ class StorageService {
   Future<void> saveWatchlist(Set<String> ids) =>
       _prefs.setStringList(_kWatchlist, ids.toList());
 
-  bool get darkMode => _prefs.getBool(_kDarkMode) ?? false;
+  bool get darkMode => _prefs.getBool(_kDarkMode) ?? true;
   Future<void> setDarkMode(bool v) => _prefs.setBool(_kDarkMode, v);
 
   String? get aiApiKey => _prefs.getString(_kAiKey);

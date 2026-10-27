@@ -16,8 +16,6 @@ async function performIndianApiFetch() {
     });
 
     const rawData = res.data || {};
-    console.log('[LIVE_IPO_API_RESPONSE]');
-    console.log(JSON.stringify(res.data, null, 2));
 
     const combined = [
       ...(rawData.active || []),
@@ -96,18 +94,11 @@ async function getIpoData() {
   return await currentFetchPromise;
 }
 
-function triggerCooldownTest() {
-  cooldownUntil = Date.now() + env.COOLDOWN_MS;
-  lastSuccessfulData = [];
-  return { success: true, message: 'Cooldown triggered manually' };
-}
-
 function getLastFetchTime() {
   return lastFetchTime;
 }
 
 module.exports = {
   getIpoData,
-  triggerCooldownTest,
   getLastFetchTime
 };
