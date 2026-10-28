@@ -169,32 +169,36 @@ function PhoneFrameCard({ screenshot, index }) {
   return (
     <div className="shrink-0 w-[275px] sm:w-[295px] select-none flex flex-col items-center">
       {/* Phone chassis */}
-      <div className="relative w-full h-[530px] rounded-[42px] bg-[#020503] p-2.5 border-4 border-[#1A2E22] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(16,185,129,0.14)] overflow-hidden">
+      <div className="relative w-full h-[540px] rounded-[42px] bg-[#020503] p-2.5 border-4 border-[#1A2E22] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.85),0_0_35px_rgba(16,185,129,0.14)] overflow-hidden">
         {/* Inner screen */}
         <div className="relative w-full h-full rounded-[32px] bg-[#040A07] overflow-hidden flex flex-col border border-surface-border">
-          {/* Status bar */}
-          <div className="pt-2 px-5 pb-1 flex items-center justify-between text-[10px] text-text-muted">
-            <span className="font-semibold text-white">9:41</span>
-            <div className="w-16 h-3.5 bg-black rounded-full flex items-center justify-center">
-              <div className="w-2 h-2 bg-[#0C1610] rounded-full" />
+          {/* Status bar only for fallback */}
+          {imgError && (
+            <div className="pt-2 px-5 pb-1 flex items-center justify-between text-[10px] text-text-muted">
+              <span className="font-semibold text-white">9:41</span>
+              <div className="w-16 h-3.5 bg-black rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-[#0C1610] rounded-full" />
+              </div>
+              <span className="font-semibold text-accent">5G</span>
             </div>
-            <span className="font-semibold text-accent">5G</span>
-          </div>
+          )}
 
-          {/* Screen Content: Image or Graceful Interactive CSS Fallback */}
-          <div className="flex-1 w-full overflow-hidden relative">
+          {/* Screen Content: Real Image or Graceful Interactive CSS Fallback */}
+          <div className="flex-1 w-full h-full overflow-hidden relative">
             {!imgError ? (
               <img
                 src={screenshot.image}
                 alt={screenshot.title}
+                width="295"
+                height="540"
+                loading="lazy"
+                decoding="async"
                 onError={() => setImgError(true)}
                 className="w-full h-full object-cover object-top"
-                loading="lazy"
               />
-            ) : null}
-
-            {/* If image fails or does not exist, render CSS mockup fallback */}
-            {imgError && <ScreenMockupFallback screenId={screenshot.id} />}
+            ) : (
+              <ScreenMockupFallback screenId={screenshot.id} />
+            )}
           </div>
         </div>
       </div>
@@ -219,6 +223,60 @@ export function ScreenshotsSection() {
   const containerRef = useRef(null);
   const trackRef = useRef(null);
   const draggableInstance = useRef(null);
+  const setWidthRef = useRef(2289);
+  const isHoveredRef = useRef(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Triple set of screenshots for seamless infinite circular scrolling in both directions
+  const tripleScreenshots = [
+    ...appScreenshots.map((item) => ({ ...item, uniqueKey: `set1-${item.id}` })),
+    ...appScreenshots.map((item) => ({ ...item, uniqueKey: `set2-${item.id}` })),
+    ...appScreenshots.map((item) => ({ ...item, uniqueKey: `set3-${item.id}` })),
+  ];
+
+  useEffect(() => {
+    isHoveredRef.current = isHovered;
+  }, [isHovered]);
+
+  const measureSetWidth = () => {
+    if (!trackRef.current || !trackRef.current.children) return 2289;
+    const firstCard = trackRef.current.children[0];
+    const eighthCard = trackRef.current.children[appScreenshots.length];
+    if (firstCard && eighthCard) {
+      const width = eighthCard.offsetLeft - firstCard.offsetLeft;
+      if (width > 0) {
+        setWidthRef.current = width;
+        return width;
+      }
+    }
+    return 2289;
+  };
+
+  const scrollByDirection = (direction) => {
+    if (!trackRef.current) return;
+    const setWidth = measureSetWidth();
+    const currentX = gsap.getProperty(trackRef.current, 'x') || 0;
+    const step = setWidth / appScreenshots.length;
+    const targetX = direction === 'right' ? currentX - step : currentX + step;
+
+    gsap.to(trackRef.current, {
+      x: targetX,
+      duration: 0.65,
+      ease: 'power2.out',
+      overwrite: 'auto',
+      onComplete: () => {
+        if (!trackRef.current) return;
+        const finalX = gsap.getProperty(trackRef.current, 'x') || 0;
+        // Seamless circular wrap: if scrolled into 3rd set, wrap back to 2nd set
+        if (finalX <= -setWidth * 2) {
+          gsap.set(trackRef.current, { x: finalX + setWidth });
+        } else if (finalX >= -setWidth * 0.2) {
+          // If scrolled backwards into 1st set, wrap forward to 2nd set
+          gsap.set(trackRef.current, { x: finalX - setWidth });
+        }
+      },
+    });
+  };
 
   useGSAP(
     () => {
@@ -226,25 +284,53 @@ export function ScreenshotsSection() {
       const container = containerRef.current;
       if (!track || !container) return;
 
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const setWidth = measureSetWidth();
 
-      // Initialize GSAP Draggable with bounds
+      // Start at Set 2 (middle copy) so user can scroll seamlessly in both directions
+      gsap.set(track, { x: -setWidth });
+
+      // Initialize GSAP Draggable with seamless circular wrapping during drag
       if (typeof Draggable !== 'undefined') {
         const instances = Draggable.create(track, {
           type: 'x',
-          edgeResistance: 0.85,
-          dragResistance: 0.1,
-          bounds: container,
+          edgeResistance: 0,
+          dragResistance: 0.05,
           cursor: 'grab',
           activeCursor: 'grabbing',
           zIndexBoost: false,
           allowContextMenu: true,
+          onDragStart: () => {
+            isHoveredRef.current = true;
+          },
+          onDrag: function () {
+            const sw = setWidthRef.current || 2289;
+            if (this.x <= -sw * 2) {
+              this.x += sw;
+              gsap.set(track, { x: this.x });
+            } else if (this.x >= -sw * 0.2) {
+              this.x -= sw;
+              gsap.set(track, { x: this.x });
+            }
+          },
+          onDragEnd: function () {
+            const sw = setWidthRef.current || 2289;
+            const current = gsap.getProperty(track, 'x') || 0;
+            if (current <= -sw * 2) {
+              gsap.set(track, { x: current + sw });
+            } else if (current >= -sw * 0.2) {
+              gsap.set(track, { x: current - sw });
+            }
+            setTimeout(() => {
+              isHoveredRef.current = false;
+            }, 1200);
+          },
         });
 
         draggableInstance.current = instances[0];
       }
 
-      // Entrance animation
+      // Entrance fade animation
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (!prefersReduced) {
         gsap.from(track.children, {
           scrollTrigger: {
@@ -252,10 +338,10 @@ export function ScreenshotsSection() {
             start: 'top 80%',
             toggleActions: 'play none none none',
           },
-          x: 60,
           opacity: 0,
-          stagger: 0.1,
-          duration: 0.8,
+          y: 35,
+          stagger: 0.03,
+          duration: 0.7,
           ease: 'power3.out',
         });
       }
@@ -267,25 +353,18 @@ export function ScreenshotsSection() {
     { scope: containerRef }
   );
 
-  const scrollByDirection = (direction) => {
-    if (!trackRef.current) return;
-    const currentX = gsap.getProperty(trackRef.current, 'x') || 0;
-    const step = 310;
-    const targetX = direction === 'left' ? currentX + step : currentX - step;
+  // Auto-scroll loop: continuously advances forward in an endless seamless circle
+  useEffect(() => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
 
-    // Constrain within track bounds
-    const containerWidth = containerRef.current?.offsetWidth || 1000;
-    const trackWidth = trackRef.current.scrollWidth || 1500;
-    const minX = Math.min(0, containerWidth - trackWidth - 32);
+    const interval = setInterval(() => {
+      if (isHoveredRef.current || draggableInstance.current?.isDragging) return;
+      scrollByDirection('right');
+    }, 3200);
 
-    const clampedX = Math.max(minX, Math.min(0, targetX));
-
-    gsap.to(trackRef.current, {
-      x: clampedX,
-      duration: 0.5,
-      ease: 'power2.out',
-    });
-  };
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section ref={containerRef} className="py-6 sm:py-10 relative overflow-hidden">
@@ -293,54 +372,57 @@ export function ScreenshotsSection() {
       <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[600px] h-[500px] bg-primary/7 rounded-full blur-[160px] pointer-events-none -z-10" />
 
       <Container>
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-6 sm:mb-8">
-          <div>
-            <SectionHeading
-              badge="App Experience"
-              title={
-                <>
-                  Crafted for Serious{' '}
-                  <GradientText variant="emerald">Mobile Intelligence</GradientText>
-                </>
-              }
-              subtitle="Swipe through the 5 core mobile workflows designed to give you a definitive edge on every IPO listing."
-            />
-          </div>
-
-          {/* Drag Pill + Left / Right Nav Buttons */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-2 border border-surface-border text-xs text-text-muted">
-              <Grab className="w-3.5 h-3.5 text-accent" />
-              <span>Drag or use arrows</span>
-            </div>
-
-            <button
-              onClick={() => scrollByDirection('left')}
-              className="w-10 h-10 rounded-xl bg-surface-2 border border-surface-border hover:border-primary/50 text-text-primary flex items-center justify-center transition-colors active:scale-95"
-              aria-label="Scroll screenshots left"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={() => scrollByDirection('right')}
-              className="w-10 h-10 rounded-xl bg-surface-2 border border-surface-border hover:border-primary/50 text-text-primary flex items-center justify-center transition-colors active:scale-95"
-              aria-label="Scroll screenshots right"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+        {/* 1. Centered Section Heading (Red Box) */}
+        <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
+          <SectionHeading
+            align="center"
+            badge="App Experience"
+            title={
+              <>
+                Crafted for Serious{' '}
+                <GradientText variant="emerald">Mobile Intelligence</GradientText>
+              </>
+            }
+            subtitle="Swipe through real mobile app workflows designed to give you a definitive edge on every IPO listing."
+          />
         </div>
 
-        {/* Draggable Track Container */}
-        <div className="overflow-visible cursor-grab active:cursor-grabbing pb-8">
-          <div
-            ref={trackRef}
-            className="flex items-start gap-6 sm:gap-8 w-max will-change-transform"
+        {/* 2. Carousel Container with Floating Left & Right Arrows */}
+        <div
+          className="relative group/carousel pb-8"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* Left Arrow Button */}
+          <button
+            type="button"
+            onClick={() => scrollByDirection('left')}
+            className="absolute -left-2 sm:-left-3 lg:-left-5 top-[250px] -translate-y-1/2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#020503]/85 hover:bg-primary/20 backdrop-blur-md border border-white/15 hover:border-primary/60 text-white flex items-center justify-center shadow-[0_10px_35px_rgba(0,0,0,0.85)] transition-all duration-200 active:scale-90 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Previous screenshot"
           >
-            {appScreenshots.map((item, index) => (
-              <PhoneFrameCard key={item.id} screenshot={item} index={index} />
-            ))}
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white transition-colors" />
+          </button>
+
+          {/* Right Arrow Button */}
+          <button
+            type="button"
+            onClick={() => scrollByDirection('right')}
+            className="absolute -right-2 sm:-right-3 lg:-right-5 top-[250px] -translate-y-1/2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#020503]/85 hover:bg-primary/20 backdrop-blur-md border border-white/15 hover:border-primary/60 text-white flex items-center justify-center shadow-[0_10px_35px_rgba(0,0,0,0.85)] transition-all duration-200 active:scale-90 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Next screenshot"
+          >
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white transition-colors" />
+          </button>
+
+          {/* Draggable Track Container */}
+          <div className="overflow-visible cursor-grab active:cursor-grabbing px-2 sm:px-4">
+            <div
+              ref={trackRef}
+              className="flex items-start gap-6 sm:gap-8 w-max will-change-transform"
+            >
+              {tripleScreenshots.map((item, index) => (
+                <PhoneFrameCard key={item.uniqueKey} screenshot={item} index={index} />
+              ))}
+            </div>
           </div>
         </div>
       </Container>

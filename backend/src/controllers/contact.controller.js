@@ -105,7 +105,7 @@ async function submitContact(req, res, next) {
           success: false,
           error: 'SERVICE_UNAVAILABLE',
           message:
-            'Contact email delivery is currently unconfigured or unavailable. Please reach out directly to support@thespotmarket.com.',
+            'Contact email delivery is currently unconfigured or unavailable. Please reach out directly to thespotmarket29@gmail.com.',
         });
       }
 
@@ -113,7 +113,7 @@ async function submitContact(req, res, next) {
       return res.status(500).json({
         success: false,
         error: 'DELIVERY_FAILED',
-        message: 'An error occurred while sending your message. Please try again or email us directly at support@thespotmarket.com.',
+        message: 'An error occurred while sending your message. Please try again or email us directly at thespotmarket29@gmail.com.',
       });
     }
   } catch (err) {

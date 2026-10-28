@@ -329,7 +329,7 @@ export function PrivacyPage() {
           <div className="p-4 rounded-xl bg-surface-2 border border-white/10 text-xs text-muted space-y-1 font-mono">
             <p className="text-white font-bold">Grievance Officer: Legal & Compliance Desk</p>
             <p>Entity: {siteConfig.legalName}</p>
-            <p>Email: privacy@thespotmarket.com / support@thespotmarket.com</p>
+            <p>Email: {siteConfig.contactEmail}</p>
             <p>Address: {siteConfig.address}</p>
           </div>
         </section>

@@ -7,13 +7,13 @@ export const siteConfig = {
   domain: 'thespotmarket.com',
   url: 'https://thespotmarket.com',
   ogImage: '/images/app_icon.png',
-  contactEmail: 'support@thespotmarket.com',
-  pressEmail: 'contact@thespotmarket.com',
+  contactEmail: 'thespotmarket29@gmail.com',
+  pressEmail: 'thespotmarket29@gmail.com',
   phonePlaceholder: '+91 (0) 22 4000 8900',
   address: 'Mumbai, Maharashtra, India',
 
   links: {
-    playStore: 'https://play.google.com/store/apps/details?id=com.techcreaturesolution.thespotmarket',
+    playStore: 'https://play.google.com/store/apps/details?id=com.thespotmarket.thespotmarket',
     appStore: 'https://apps.apple.com/app/thespotmarket/id000000000',
     twitter: 'https://twitter.com/thespotmarket',
     telegram: 'https://t.me/thespotmarket',
@@ -21,6 +21,7 @@ export const siteConfig = {
     instagram: 'https://instagram.com/thespotmarket',
     youtube: 'https://youtube.com/@thespotmarket',
     github: 'https://github.com/techcreaturesolution/TheSpotMarket',
+    developer: 'https://techcreaturesolution.com/',
   },
 
   socials: {

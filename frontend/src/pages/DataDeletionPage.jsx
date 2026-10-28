@@ -234,8 +234,7 @@ export function DataDeletionPage() {
           </p>
           <div className="p-4 rounded-xl bg-surface-2 border border-white/10 text-xs text-muted space-y-1 font-mono">
             <p className="text-white font-bold">{siteConfig.legalName} — Privacy Desk</p>
-            <p>Support Email: support@thespotmarket.com</p>
-            <p>Privacy Email: privacy@thespotmarket.com</p>
+            <p>Support Email: {siteConfig.contactEmail}</p>
             <p>Website Contact Form: <Link to="/contact" className="text-accent underline font-sans">thespotmarket.com/contact</Link></p>
           </div>
         </section>
