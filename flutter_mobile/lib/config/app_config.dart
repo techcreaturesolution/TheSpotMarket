@@ -92,6 +92,10 @@ class AppConfig {
   static const nseBaseUrl = 'https://www.nseindia.com';
 
   static const newsFeeds = <NewsFeed>[
+    NewsFeed('Google News - Indian Markets',
+        'https://news.google.com/rss/search?q=NSE+NIFTY+Indian+stock+market&hl=en-IN&gl=IN&ceid=IN:en'),
+    NewsFeed('Google News - IPOs India',
+        'https://news.google.com/rss/search?q=IPO+India+GMP&hl=en-IN&gl=IN&ceid=IN:en'),
     NewsFeed('Economic Times - Markets',
         'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms'),
     NewsFeed('Economic Times - Stocks',

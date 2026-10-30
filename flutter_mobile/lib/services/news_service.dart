@@ -56,9 +56,10 @@ class NewsService {
   Future<List<NewsArticle>> _fetchFeed(NewsFeed feed) async {
     try {
       final res = await _client.get(Uri.parse(feed.url), headers: {
-        'User-Agent': 'TheSpotMarket/1.0 (+https://thespotmarket.app)',
-        'Accept': 'application/rss+xml, application/xml, text/xml',
-      }).timeout(const Duration(seconds: 10));
+        'User-Agent':
+            'Mozilla/5.0 (Linux; Android 13; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+      }).timeout(const Duration(seconds: 8));
       if (res.statusCode != 200) return const [];
       return parseRss(res.body, feed.name);
     } catch (_) {

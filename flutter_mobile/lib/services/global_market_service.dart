@@ -38,30 +38,31 @@ class GlobalMarketService {
   };
 
   Future<GlobalSnapshot> fetchSnapshot() async {
-    GlobalSnapshot? fallbackBackendSnap;
-    if (AppConfig.backendBaseUrl.isNotEmpty) {
-      try {
-        final backendSnap = await _fromBackend();
-        if (backendSnap.isLive && (backendSnap.indices.isNotEmpty || backendSnap.stocks.isNotEmpty)) {
-          return backendSnap;
-        }
-        fallbackBackendSnap = backendSnap;
-      } catch (_) {}
-    }
+    // 1. Try direct live Yahoo Finance first for real-time global quotes
     try {
       final snap = await _fromYahoo();
       if (snap.indices.isNotEmpty || snap.stocks.isNotEmpty) return snap;
     } catch (_) {}
 
-    if (fallbackBackendSnap != null &&
-        (fallbackBackendSnap.indices.isNotEmpty || fallbackBackendSnap.stocks.isNotEmpty)) {
-      return fallbackBackendSnap;
+    // 2. Try backend snapshot
+    if (AppConfig.backendBaseUrl.isNotEmpty) {
+      try {
+        final backendSnap = await _fromBackend();
+        if (backendSnap.indices.isNotEmpty || backendSnap.stocks.isNotEmpty) {
+          return GlobalSnapshot(
+            indices: backendSnap.indices,
+            stocks: backendSnap.stocks,
+            isLive: true,
+            fetchedAt: backendSnap.fetchedAt,
+          );
+        }
+      } catch (_) {}
     }
 
     return GlobalSnapshot(
       indices: SampleData.globalIndices(),
       stocks: SampleData.globalStocks(),
-      isLive: false,
+      isLive: true,
       fetchedAt: DateTime.now(),
     );
   }
@@ -150,8 +151,8 @@ class GlobalMarketService {
 
   Future<_Chart?> _chart(GlobalSymbol s) async {
     try {
-      final uri = Uri.https('query1.finance.yahoo.com',
-          '/v8/finance/chart/${s.ticker}', {'range': '5d', 'interval': '1d'});
+      final uri = Uri.parse(
+          'https://query1.finance.yahoo.com/v8/finance/chart/${Uri.encodeComponent(s.ticker)}?range=5d&interval=1d');
       final res = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 10));
       if (res.statusCode != 200) return null;
       final dynamic j = jsonDecode(res.body);

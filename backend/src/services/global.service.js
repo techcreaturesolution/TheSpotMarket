@@ -27,7 +27,7 @@ function getGlobalSnapshot() {
 
   return {
     success: true,
-    isLive: false,
+    isLive: true,
     fetchedAt: new Date().toISOString(),
     indices,
     stocks
