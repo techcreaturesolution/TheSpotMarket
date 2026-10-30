@@ -7,7 +7,14 @@ let marketCacheData = null;
 let marketCacheTime = 0;
 let currentMarketPromise = null;
 
+// Angel One index tokens (NSE)
+const angelIndexTokens = {
+  "99926000": { name: "NIFTY 50", exchange: "NSE" },
+  "99926009": { name: "NIFTY BANK", exchange: "NSE" }
+};
+
 const tokensToTrack = [
+  ...Object.keys(angelIndexTokens),
   "2885", "1333", "4963", "1594", "11536", "1660", "11483",
   "5900", "1922", "3045", "1394", "10604", "317", "236",
   "3456", "3499", "10999", "3506", "3351", "2031", "7229", "3787"
@@ -30,7 +37,39 @@ async function performMarketFetch() {
       throw new Error('Failed to fetch market data from Angel One');
     }
 
-    const allStocks = res.data.fetched.map(mapAngelPayloadToSchema);
+    const angelIndices = [];
+    const stockItems = [];
+
+    for (const item of res.data.fetched) {
+      const rawToken = (item.symbolToken || item.token || '').toString();
+      if (angelIndexTokens[rawToken] && parseFloat(item.ltp) > 0) {
+        const info = angelIndexTokens[rawToken];
+        const ltp = parseFloat(item.ltp) || 0;
+        const close = parseFloat(item.close) || ltp;
+        const change = parseFloat((ltp - close).toFixed(2));
+        const changePct = close !== 0 ? parseFloat(((change / close) * 100).toFixed(2)) : 0;
+        const open = parseFloat(item.open) || ltp;
+        const high = parseFloat(item.high) || ltp;
+        const low = parseFloat(item.low) || ltp;
+
+        angelIndices.push({
+          name: info.name,
+          exchange: info.exchange,
+          last: ltp,
+          change,
+          changePct,
+          open,
+          high,
+          low,
+          previousClose: close,
+          sparkline: [open, low, high, ltp]
+        });
+      } else if (!angelIndexTokens[rawToken]) {
+        stockItems.push(item);
+      }
+    }
+
+    const allStocks = stockItems.map(mapAngelPayloadToSchema);
 
     let gainers = allStocks.filter(s => s.changePct > 0);
     gainers.sort((a, b) => b.changePct - a.changePct);
@@ -38,9 +77,9 @@ async function performMarketFetch() {
     let losers = allStocks.filter(s => s.changePct < 0);
     losers.sort((a, b) => a.changePct - b.changePct);
 
-    console.log(`[MARKET_MOVERS] Angel One fetched=${res.data.fetched.length} gainers=${gainers.length} losers=${losers.length}`);
+    console.log(`[MARKET_MOVERS] Angel One fetched=${res.data.fetched.length} indices=${angelIndices.length} gainers=${gainers.length} losers=${losers.length}`);
 
-    return { gainers, losers };
+    return { gainers, losers, indices: angelIndices };
   } catch (err) {
     console.error('[MARKET_MOVERS] Angel One Fetch failed:', err.message);
     if (err.message.includes('Invalid Token') || err.message.includes('Session')) {
@@ -54,25 +93,25 @@ async function getMarketData() {
   const now = Date.now();
   if (marketCacheData && (now - marketCacheTime < env.MARKET_CACHE_TTL_MS)) {
     console.log('[MARKET_MOVERS] cache=HIT age=' + Math.round((now - marketCacheTime) / 1000) + 's');
-    return { data: marketCacheData, isLive: true, stale: false, source: 'IndianAPI' };
+    return { data: marketCacheData, isLive: true, stale: false, source: 'AngelOneSmartAPI' };
   }
 
   if (!currentMarketPromise) {
-    console.log('[MARKET_MOVERS] source=IndianAPI cache=MISS');
+    console.log('[MARKET_MOVERS] source=AngelOneSmartAPI cache=MISS');
     currentMarketPromise = performMarketFetch().then(res => {
       currentMarketPromise = null;
       if (res) {
         marketCacheData = res;
         marketCacheTime = Date.now();
-        console.log(`[MARKET_MOVERS] source=IndianAPI gainers=${res.gainers.length} losers=${res.losers.length} isLive=true`);
-        return { data: res, isLive: true, stale: false, source: 'IndianAPI' };
+        console.log(`[MARKET_MOVERS] source=AngelOneSmartAPI indices=${res.indices.length} gainers=${res.gainers.length} losers=${res.losers.length} isLive=true`);
+        return { data: res, isLive: true, stale: false, source: 'AngelOneSmartAPI' };
       } else {
         if (marketCacheData) {
-          console.log('[MARKET_MOVERS] source=IndianAPI status=FAILED using_stale_cache=true');
-          return { data: marketCacheData, isLive: false, stale: true, source: 'IndianAPI' };
+          console.log('[MARKET_MOVERS] source=AngelOneSmartAPI status=FAILED using_stale_cache=true');
+          return { data: marketCacheData, isLive: false, stale: true, source: 'AngelOneSmartAPI' };
         } else {
-          console.log('[MARKET_MOVERS] source=IndianAPI status=FAILED');
-          return { data: null, isLive: false, stale: false, source: 'IndianAPI' };
+          console.log('[MARKET_MOVERS] source=AngelOneSmartAPI status=FAILED');
+          return { data: null, isLive: false, stale: false, source: 'AngelOneSmartAPI' };
         }
       }
     });
@@ -169,6 +208,24 @@ async function fetchLiveIndicesFromYahoo() {
   return getDefaultIndices();
 }
 
+async function getLiveIndices(angelIndices = []) {
+  if (angelIndices && angelIndices.length > 0) {
+    // Angel One provided 0-delay NIFTY 50 & NIFTY BANK!
+    // Fetch complementary indices (SENSEX, NIFTY IT) from Yahoo
+    const yahooIndices = await fetchLiveIndicesFromYahoo().catch(() => []);
+    const merged = [...angelIndices];
+    for (const y of yahooIndices) {
+      if (!merged.some(m => m.name === y.name)) {
+        merged.push(y);
+      }
+    }
+    return merged;
+  }
+
+  // Fallback to Yahoo Finance if Angel One indices not available
+  return await fetchLiveIndicesFromYahoo();
+}
+
 function getDefaultIndices() {
   return [
     { name: 'NIFTY 50', exchange: 'NSE', last: 22975.85, change: 39.10, changePct: 0.17, previousClose: 22936.75, sparkline: [22930, 22945, 22960, 22970, 22975.85] },
@@ -184,5 +241,6 @@ module.exports = {
   getMarketData,
   getMarketCacheTime,
   getDefaultIndices,
-  fetchLiveIndicesFromYahoo
+  fetchLiveIndicesFromYahoo,
+  getLiveIndices
 };

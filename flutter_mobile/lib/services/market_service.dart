@@ -153,10 +153,11 @@ class MarketService {
     final indices = <MarketIndex>[];
     for (final (ticker, name, exch) in symbols) {
       try {
-        final uri = Uri.https('query1.finance.yahoo.com',
-            '/v8/finance/chart/$ticker', {'range': '1d', 'interval': '15m'});
+        final uri = Uri.parse(
+            'https://query1.finance.yahoo.com/v8/finance/chart/${Uri.encodeComponent(ticker)}?range=1d&interval=15m');
         final res = await _client.get(uri, headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent':
+              'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36',
           'Accept': 'application/json',
         }).timeout(const Duration(seconds: 8));
 
@@ -193,7 +194,9 @@ class MarketService {
             }
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[MARKET_RUNTIME] Yahoo index $ticker error: $e');
+      }
     }
 
     if (indices.isEmpty) throw Exception('Yahoo indices empty');
