@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -478,16 +480,39 @@ void main() {
       expect(ipos.first.lotSize, 70);
     });
 
-    test('IpoService falls back to SampleData on network 500 error or exception', () async {
+    test('IpoService throws and does not fall back to SampleData on network 500 error in live mode', () async {
       final mockClient = MockClient((request) async {
         return http.Response('Server Error', 500);
       });
 
       final ipoService = IpoService(client: mockClient);
-      final ipos = await ipoService.fetchIpos();
+      expect(() => ipoService.fetchIpos(), throwsA(isA<Exception>()));
+    });
 
-      expect(ipos, isNotEmpty);
-      expect(ipos.any((i) => i.id == 'sample-open-1'), isTrue);
+    test('IpoService handles empty IPO API response preserving empty list without fake sample fallback', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode([]), 200);
+      });
+
+      final ipoService = IpoService(client: mockClient);
+      final feed = await ipoService.fetchIpos();
+
+      expect(feed.ipos, isEmpty);
+      expect(feed.isLive, isTrue);
+    });
+
+    test('IpoService returns sample fallback only when explicitly requested via allowSampleFallback: true', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('Server Error', 500);
+      });
+
+      final ipoService = IpoService(client: mockClient);
+      final feed = await ipoService.fetchIpos(allowSampleFallback: true);
+
+      expect(feed.ipos, isNotEmpty);
+      expect(feed.isLive, isFalse);
+      expect(feed.source, MarketDataSource.sampleFallback);
+      expect(feed.any((i) => i.id == 'sample-open-1'), isTrue);
     });
 
     test('AllotmentService.checkMany returns AllotmentOutcome.unknown safely on network error', () async {
@@ -513,13 +538,28 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final storage = await StorageService.create(prefs: prefs);
 
-      final state = AppState(storage: storage);
+      final mockClient = MockClient((request) async {
+        return http.Response(jsonEncode([
+          {
+            "id": "live_ipo_1",
+            "name": "Live Real Energy Ltd",
+            "symbol": "REALENG",
+            "priceMin": 100,
+            "priceMax": 105,
+            "lotSize": 100,
+            "status": "OPEN"
+          }
+        ]), 200);
+      });
+
+      final state = AppState(storage: storage, ipo: IpoService(client: mockClient));
       expect(state.ipoLoading, isFalse);
 
       await state.loadIpos();
 
       expect(state.ipoLoading, isFalse);
       expect(state.ipos, isNotEmpty);
+      expect(state.ipos.first.symbol, 'REALENG');
       expect(state.ipoError, isNull);
     });
 
@@ -722,6 +762,176 @@ void main() {
 
       await future1;
       expect(state.newsLoading, isFalse);
+    });
+  });
+
+  group('Phase 8 — Progressive Loading & Fake IPO Elimination Hardening', () {
+    test('AppState progressive loading updates market state and clears isInitialLoading before slow news completes', () async {
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final storage = await StorageService.create(prefs: prefs);
+
+      final mockMarketClient = MockClient((request) async {
+        return http.Response(jsonEncode({
+          "indices": [
+            {
+              "symbol": "NIFTY 50",
+              "name": "NIFTY 50",
+              "last": 24500.0,
+              "change": 120.0,
+              "changePct": 0.49
+            }
+          ],
+          "gainers": [],
+          "losers": [],
+          "isLive": true
+        }), 200);
+      });
+
+      final slowNewsCompleter = Completer<http.Response>();
+      final mockNewsClient = MockClient((request) => slowNewsCompleter.future);
+
+      final state = AppState(
+        storage: storage,
+        market: MarketService(client: mockMarketClient),
+        news: NewsService(client: mockNewsClient),
+      );
+
+      expect(state.isInitialLoading, isTrue);
+      expect(state.indices, isEmpty);
+
+      // Trigger refreshAll
+      final refreshFuture = state.refreshAll();
+
+      // Yield event loop so market fetch completes while news is still pending
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      // Market data arrived and updated state progressively
+      expect(state.indices, isNotEmpty);
+      expect(state.indices.first.name, 'NIFTY 50');
+      expect(state.isInitialLoading, isFalse); // Cleared because primary data arrived!
+      expect(state.marketLoading, isFalse);
+      expect(state.newsLoading, isTrue); // News is still running independently
+
+      // Now complete the slow news request
+      slowNewsCompleter.complete(http.Response('Server Error', 500));
+      await refreshFuture;
+
+      expect(state.newsLoading, isFalse);
+      expect(state.indices, isNotEmpty); // Market data was never blocked or cleared by slow news
+    });
+
+    test('AppState news failure does not hide valid market and IPO data', () async {
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final storage = await StorageService.create(prefs: prefs);
+
+      final mockMarketClient = MockClient((request) async {
+        return http.Response(jsonEncode({
+          "indices": [
+            {
+              "symbol": "NIFTY 50",
+              "name": "NIFTY 50",
+              "last": 25000.0,
+              "change": 50.0,
+              "changePct": 0.2
+            }
+          ],
+          "gainers": [],
+          "losers": []
+        }), 200);
+      });
+
+      final mockIpoClient = MockClient((request) async {
+        return http.Response(jsonEncode([
+          {
+            "id": "ipo_alpha",
+            "name": "Alpha Corp",
+            "symbol": "ALPHA",
+            "status": "OPEN",
+            "priceMin": 100,
+            "priceMax": 105,
+            "lotSize": 100
+          }
+        ]), 200);
+      });
+
+      final mockNewsClient = MockClient((request) async {
+        return http.Response('Internal Error', 500);
+      });
+
+      final state = AppState(
+        storage: storage,
+        market: MarketService(client: mockMarketClient),
+        ipo: IpoService(client: mockIpoClient),
+        news: NewsService(client: mockNewsClient),
+      );
+
+      await state.refreshAll();
+
+      // Market and IPO succeeded despite news failing
+      expect(state.indices, isNotEmpty);
+      expect(state.ipos, isNotEmpty);
+      expect(state.ipos.first.symbol, 'ALPHA');
+      expect(state.hasDashboardData, isTrue);
+      expect(state.isInitialLoading, isFalse);
+    });
+
+    test('AppState loadIpos preserves previous live IPOs when a subsequent refresh fails', () async {
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final storage = await StorageService.create(prefs: prefs);
+
+      bool shouldFail = false;
+      final mockClient = MockClient((request) async {
+        if (shouldFail) {
+          return http.Response('Service Unavailable', 503);
+        }
+        return http.Response(jsonEncode([
+          {
+            "id": "ipo_preserved",
+            "name": "Preserved Technologies Ltd",
+            "symbol": "PRESERV",
+            "status": "OPEN",
+            "priceMin": 200,
+            "priceMax": 210,
+            "lotSize": 50
+          }
+        ]), 200);
+      });
+
+      final state = AppState(storage: storage, ipo: IpoService(client: mockClient));
+
+      // First fetch succeeds
+      await state.loadIpos();
+      expect(state.ipos.length, 1);
+      expect(state.ipos.first.symbol, 'PRESERV');
+
+      // Second fetch fails
+      shouldFail = true;
+      await state.loadIpos(force: true);
+
+      // Previous valid real IPOs are preserved, not wiped out or replaced with sample data
+      expect(state.ipos.length, 1);
+      expect(state.ipos.first.symbol, 'PRESERV');
+      expect(state.ipoError, isNotNull);
+    });
+
+    test('Bharat Renewables Ltd and Zenith Fintech Services do not appear in live mode on API failure', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('500 Internal Server Error', 500);
+      });
+
+      final ipoService = IpoService(client: mockClient);
+
+      // Calling fetchIpos() without allowSampleFallback throws, never returns fake companies
+      expect(
+        () => ipoService.fetchIpos(),
+        throwsA(isA<Exception>()),
+      );
     });
   });
 }

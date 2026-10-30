@@ -810,7 +810,7 @@ class _LiquidGlassInputFieldState extends State<_LiquidGlassInputField> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           decoration: BoxDecoration(

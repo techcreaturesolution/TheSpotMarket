@@ -38,15 +38,26 @@ class GlobalMarketService {
   };
 
   Future<GlobalSnapshot> fetchSnapshot() async {
+    GlobalSnapshot? fallbackBackendSnap;
     if (AppConfig.backendBaseUrl.isNotEmpty) {
       try {
-        return await _fromBackend();
+        final backendSnap = await _fromBackend();
+        if (backendSnap.isLive && (backendSnap.indices.isNotEmpty || backendSnap.stocks.isNotEmpty)) {
+          return backendSnap;
+        }
+        fallbackBackendSnap = backendSnap;
       } catch (_) {}
     }
     try {
       final snap = await _fromYahoo();
       if (snap.indices.isNotEmpty || snap.stocks.isNotEmpty) return snap;
     } catch (_) {}
+
+    if (fallbackBackendSnap != null &&
+        (fallbackBackendSnap.indices.isNotEmpty || fallbackBackendSnap.stocks.isNotEmpty)) {
+      return fallbackBackendSnap;
+    }
+
     return GlobalSnapshot(
       indices: SampleData.globalIndices(),
       stocks: SampleData.globalStocks(),

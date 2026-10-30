@@ -121,7 +121,7 @@ class _CurvedNotchedNavBarState extends State<CurvedNotchedNavBar>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(34),
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                       child: Stack(
                         children: [
                           // 1. Liquid Glass Translucent Base with Specular Border

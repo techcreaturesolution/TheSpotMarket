@@ -145,15 +145,16 @@ class MarketService {
   Future<MarketSnapshot> _fromYahoo() async {
     final symbols = [
       ('^NSEI', 'NIFTY 50', 'NSE'),
-      ('^BSESN', 'SENSEX', 'BSE'),
       ('^NSEBANK', 'NIFTY BANK', 'NSE'),
+      ('^CNXIT', 'NIFTY IT', 'NSE'),
+      ('^BSESN', 'SENSEX', 'BSE'),
     ];
 
     final indices = <MarketIndex>[];
     for (final (ticker, name, exch) in symbols) {
       try {
         final uri = Uri.https('query1.finance.yahoo.com',
-            '/v8/finance/chart/$ticker', {'range': '1d', 'interval': '1m'});
+            '/v8/finance/chart/$ticker', {'range': '1d', 'interval': '15m'});
         final res = await _client.get(uri, headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'application/json',
@@ -166,8 +167,16 @@ class MarketService {
           if (meta != null) {
             final double last = (meta['regularMarketPrice'] as num?)?.toDouble() ?? 0;
             final double prev = (meta['chartPreviousClose'] as num? ?? meta['previousClose'] as num?)?.toDouble() ?? last;
-            final change = last - prev;
-            final changePct = prev == 0 ? 0.0 : (change / prev) * 100;
+            final change = double.parse((last - prev).toStringAsFixed(2));
+            final changePct = prev == 0 ? 0.0 : double.parse(((change / prev) * 100).toStringAsFixed(2));
+
+            final rawCloses = (result?['indicators']?['quote']?[0]?['close'] as List?) ?? [];
+            final sparkline = rawCloses
+                .whereType<num>()
+                .map((n) => n.toDouble())
+                .where((d) => !d.isNaN && d > 0)
+                .toList();
+
             if (last > 0) {
               indices.add(MarketIndex(
                 name: name,
@@ -179,6 +188,7 @@ class MarketService {
                 high: (meta['regularMarketDayHigh'] as num?)?.toDouble() ?? last,
                 low: (meta['regularMarketDayLow'] as num?)?.toDouble() ?? last,
                 previousClose: prev,
+                sparkline: sparkline.isNotEmpty ? sparkline : [prev, last],
               ));
             }
           }
@@ -192,7 +202,7 @@ class MarketService {
       indices: indices,
       gainers: SampleData.gainers(),
       losers: SampleData.losers(),
-      isLive: false,
+      isLive: true,
       source: MarketDataSource.yahoo,
       fetchedAt: DateTime.now(),
     );

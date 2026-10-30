@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -8,6 +11,12 @@ plugins {
 // Firebase config is supplied by the developer (see README); the build still works without it.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
+}
+
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
 android {
@@ -39,11 +48,42 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (!keystorePropertiesFile.exists()) {
+                throw GradleException("Release signing failed: 'key.properties' file not found at ${keystorePropertiesFile.absolutePath}")
+            }
+
+            val storePasswordProp = keystoreProperties.getProperty("storePassword")
+            val keyPasswordProp = keystoreProperties.getProperty("keyPassword")
+            val keyAliasProp = keystoreProperties.getProperty("keyAlias")
+            val storeFilePathProp = keystoreProperties.getProperty("storeFile")
+
+            val missingProps = mutableListOf<String>()
+            if (storePasswordProp.isNullOrBlank()) missingProps.add("storePassword")
+            if (keyPasswordProp.isNullOrBlank()) missingProps.add("keyPassword")
+            if (keyAliasProp.isNullOrBlank()) missingProps.add("keyAlias")
+            if (storeFilePathProp.isNullOrBlank()) missingProps.add("storeFile")
+
+            if (missingProps.isNotEmpty()) {
+                throw GradleException("Release signing failed: Missing or empty properties in 'key.properties': ${missingProps.joinToString(", ")}")
+            }
+
+            val keystoreFile = file(storeFilePathProp)
+            if (!keystoreFile.exists()) {
+                throw GradleException("Release signing failed: Keystore file does not exist at path: $storeFilePathProp")
+            }
+
+            keyAlias = keyAliasProp
+            keyPassword = keyPasswordProp
+            storeFile = keystoreFile
+            storePassword = storePasswordProp
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

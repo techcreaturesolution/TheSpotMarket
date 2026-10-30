@@ -57,7 +57,7 @@ class AppState extends ChangeNotifier {
   void startAutoRefresh({Duration interval = const Duration(seconds: 15)}) {
     _autoRefreshTimer?.cancel();
     _autoRefreshTimer = Timer.periodic(interval, (_) => refreshAllSilently());
-    _startLiveMarketTicker();
+    // Artificial jitter ticker disabled so authentic live market data is preserved
   }
 
   void _startLiveMarketTicker() {
@@ -162,6 +162,11 @@ class AppState extends ChangeNotifier {
     return '$feature update nahi ho paya. Kripya internet connection check karein.';
   }
 
+  int _marketReqSeq = 0;
+  int _ipoReqSeq = 0;
+  int _newsReqSeq = 0;
+  int _globalReqSeq = 0;
+
   MarketSnapshot? get snapshot => _snapshot;
   bool get marketLoading => _marketLoading;
   String? get marketError => _marketError;
@@ -171,20 +176,28 @@ class AppState extends ChangeNotifier {
     if (_marketLoading && !force) return;
     _marketLoading = true;
     _marketError = null;
+    final seq = ++_marketReqSeq;
     if (notify) notifyListeners();
     try {
       final snap = await _market.fetchSnapshot();
+      if (seq != _marketReqSeq || _disposed) return;
       if (snap.indices.isNotEmpty || snap.gainers.isNotEmpty) {
         _snapshot = snap;
         _lastMarketRefresh = DateTime.now();
         _recomputeLocalSuggestions();
+        if (_isInitialLoading) {
+          _isInitialLoading = false;
+        }
       }
     } catch (e) {
+      if (seq != _marketReqSeq || _disposed) return;
       _marketError = e.toString();
       _lastErrorNotice = _formatUserFriendlyError(e, 'Share Market data');
     } finally {
-      _marketLoading = false;
-      if (notify) notifyListeners();
+      if (seq == _marketReqSeq && !_disposed) {
+        _marketLoading = false;
+        if (notify) notifyListeners();
+      }
     }
   }
 
@@ -210,19 +223,25 @@ class AppState extends ChangeNotifier {
     if (_ipoLoading && !force) return;
     _ipoLoading = true;
     _ipoError = null;
+    final seq = ++_ipoReqSeq;
     if (notify) notifyListeners();
     try {
       final feed = await _ipo.fetchIpos();
-      if (feed.ipos.isNotEmpty) {
-        _ipoFeed = feed;
-        _lastIpoRefresh = DateTime.now();
+      if (seq != _ipoReqSeq || _disposed) return;
+      _ipoFeed = feed;
+      _lastIpoRefresh = DateTime.now();
+      if (_isInitialLoading && feed.ipos.isNotEmpty) {
+        _isInitialLoading = false;
       }
     } catch (e) {
+      if (seq != _ipoReqSeq || _disposed) return;
       _ipoError = e.toString();
       _lastErrorNotice = _formatUserFriendlyError(e, 'IPO data');
     } finally {
-      _ipoLoading = false;
-      if (notify) notifyListeners();
+      if (seq == _ipoReqSeq && !_disposed) {
+        _ipoLoading = false;
+        if (notify) notifyListeners();
+      }
     }
   }
 
@@ -240,9 +259,11 @@ class AppState extends ChangeNotifier {
     if (_newsLoading && !force) return;
     _newsLoading = true;
     _newsError = null;
+    final seq = ++_newsReqSeq;
     if (notify) notifyListeners();
     try {
       final res = await _news.fetchAll();
+      if (seq != _newsReqSeq || _disposed) return;
       if (res.articles.isNotEmpty) {
         _newsResult = res;
         _lastNewsRefresh = DateTime.now();
@@ -250,11 +271,14 @@ class AppState extends ChangeNotifier {
       }
       _brief = null;
     } catch (e) {
+      if (seq != _newsReqSeq || _disposed) return;
       _newsError = e.toString();
       _lastErrorNotice = _formatUserFriendlyError(e, 'Market News');
     } finally {
-      _newsLoading = false;
-      if (notify) notifyListeners();
+      if (seq == _newsReqSeq && !_disposed) {
+        _newsLoading = false;
+        if (notify) notifyListeners();
+      }
     }
   }
 
@@ -277,9 +301,11 @@ class AppState extends ChangeNotifier {
     if (_globalLoading && !force) return;
     _globalLoading = true;
     _globalError = null;
+    final seq = ++_globalReqSeq;
     if (notify) notifyListeners();
     try {
       final (snap, feed) = await (_global.fetchSnapshot(), _news.fetchGlobal()).wait;
+      if (seq != _globalReqSeq || _disposed) return;
       if (snap.indices.isNotEmpty || snap.stocks.isNotEmpty) {
         _globalSnapshot = snap;
       }
@@ -289,11 +315,14 @@ class AppState extends ChangeNotifier {
       _lastGlobalRefresh = DateTime.now();
       _recomputeGlobalSuggestions();
     } catch (e) {
+      if (seq != _globalReqSeq || _disposed) return;
       _globalError = e.toString();
       _lastErrorNotice = _formatUserFriendlyError(e, 'Global market data');
     } finally {
-      _globalLoading = false;
-      if (notify) notifyListeners();
+      if (seq == _globalReqSeq && !_disposed) {
+        _globalLoading = false;
+        if (notify) notifyListeners();
+      }
     }
   }
 
@@ -332,18 +361,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     await Future.wait([
-      loadMarket(force: true, notify: false),
-      loadIpos(force: true, notify: false),
-      loadNews(force: true, notify: false),
-      loadGlobal(force: true, notify: false),
+      loadMarket(force: true, notify: true),
+      loadIpos(force: true, notify: true),
+      loadNews(force: true, notify: true),
+      loadGlobal(force: true, notify: true),
     ]);
     _recomputeLocalSuggestions();
     _recomputeGlobalSuggestions();
     _isInitialLoading = false;
-    _marketLoading = false;
-    _ipoLoading = false;
-    _newsLoading = false;
-    _globalLoading = false;
     notifyListeners();
   }
 
@@ -367,12 +392,32 @@ class AppState extends ChangeNotifier {
       final shouldFetchGlobal = _lastGlobalRefresh == null ||
           now.difference(_lastGlobalRefresh!) >= const Duration(seconds: 45);
 
-      final results = await Future.wait([
-        shouldFetchMarket ? _market.fetchSnapshot() : Future.value(_snapshot ?? MarketSnapshot(indices: [], gainers: [], losers: [], isLive: false, fetchedAt: now)),
-        shouldFetchIpo ? _ipo.fetchIpos() : Future.value(_ipoFeed),
-        shouldFetchNews ? _news.fetchAll() : Future.value(_newsResult),
-        shouldFetchGlobal ? _global.fetchSnapshot() : Future.value(_globalSnapshot ?? GlobalSnapshot(indices: [], stocks: [], isLive: false, fetchedAt: now)),
-      ]);
+      final marketFuture = shouldFetchMarket
+          ? _market.fetchSnapshot().then<MarketSnapshot?>((s) => s, onError: (e) {
+              if (kDebugMode) debugPrint('[SilentRefresh] Market error: $e');
+              return null;
+            })
+          : Future.value(_snapshot ?? MarketSnapshot(indices: [], gainers: [], losers: [], isLive: false, fetchedAt: now));
+      final ipoFuture = shouldFetchIpo
+          ? _ipo.fetchIpos().then<IpoFeed?>((f) => f, onError: (e) {
+              if (kDebugMode) debugPrint('[SilentRefresh] IPO error: $e');
+              return null;
+            })
+          : Future.value(_ipoFeed);
+      final newsFuture = shouldFetchNews
+          ? _news.fetchAll().then<NewsFeedResult?>((n) => n, onError: (e) {
+              if (kDebugMode) debugPrint('[SilentRefresh] News error: $e');
+              return null;
+            })
+          : Future.value(_newsResult);
+      final globalFuture = shouldFetchGlobal
+          ? _global.fetchSnapshot().then<GlobalSnapshot?>((g) => g, onError: (e) {
+              if (kDebugMode) debugPrint('[SilentRefresh] Global error: $e');
+              return null;
+            })
+          : Future.value(_globalSnapshot ?? GlobalSnapshot(indices: [], stocks: [], isLive: false, fetchedAt: now));
+
+      final results = await Future.wait([marketFuture, ipoFuture, newsFuture, globalFuture]);
 
       if (shouldFetchIpo) _lastIpoRefresh = now;
       if (shouldFetchNews) _lastNewsRefresh = now;
@@ -381,14 +426,14 @@ class AppState extends ChangeNotifier {
 
       if (_disposed) return;
 
-      final snap = results[0] as MarketSnapshot;
+      final snap = results[0] as MarketSnapshot?;
       final ipoFeed = results[1] as IpoFeed?;
       final newsFeed = results[2] as NewsFeedResult?;
-      final globalSnap = results[3] as GlobalSnapshot;
+      final globalSnap = results[3] as GlobalSnapshot?;
 
       bool changed = false;
 
-      if (snap.indices.isNotEmpty || snap.gainers.isNotEmpty) {
+      if (snap != null && (snap.indices.isNotEmpty || snap.gainers.isNotEmpty)) {
         if (_hasMarketChanged(_snapshot, snap)) {
           _snapshot = snap;
           changed = true;
@@ -409,7 +454,7 @@ class AppState extends ChangeNotifier {
         }
       }
 
-      if (globalSnap.indices.isNotEmpty || globalSnap.stocks.isNotEmpty) {
+      if (globalSnap != null && (globalSnap.indices.isNotEmpty || globalSnap.stocks.isNotEmpty)) {
         if (_hasGlobalChanged(_globalSnapshot, globalSnap)) {
           _globalSnapshot = globalSnap;
           changed = true;

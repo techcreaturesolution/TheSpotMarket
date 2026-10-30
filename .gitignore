@@ -64,3 +64,11 @@ app.*.map.json
 **/.env
 **/.env.local
 **/.env.production
+
+# Keystore and signing credentials (never commit)
+key.properties
+**/key.properties
+*.jks
+**/*.jks
+*.keystore
+**/*.keystore

@@ -39,7 +39,7 @@ class IpoService {
 
   final http.Client _client;
 
-  Future<IpoFeed> fetchIpos() async {
+  Future<IpoFeed> fetchIpos({bool allowSampleFallback = false}) async {
     final candidateUrls = [
       '${AppConfig.backendBaseUrl}/ipos',
       if (AppConfig.backendBaseUrl.contains('127.0.0.1') || AppConfig.backendBaseUrl.contains('localhost')) ...[
@@ -47,13 +47,17 @@ class IpoService {
       ]
     ];
 
+    Object? lastError;
+    int? lastStatusCode;
+
     for (final uriStr in candidateUrls) {
       try {
         debugPrint('[IPO_SERVICE] Requesting IPO data from $uriStr');
         final res = await _client.get(Uri.parse(uriStr)).timeout(const Duration(seconds: 30));
         debugPrint('[IPO_SERVICE] Response code: ${res.statusCode}, bytes: ${res.bodyBytes.length}');
-        
-        if (res.statusCode == 200 || res.statusCode == 503) {
+        lastStatusCode = res.statusCode;
+
+        if (res.statusCode == 200) {
           final dynamic body = jsonDecode(res.body);
           final bool isLive = body is Map ? body['isLive'] == true : true;
           final String sourceStr = body is Map ? (body['source']?.toString() ?? 'BACKEND') : 'BACKEND';
@@ -89,30 +93,36 @@ class IpoService {
             }
           }
           
-          if (ipos.isNotEmpty) {
-            final feed = IpoFeed(
-              ipos: _sorted(ipos),
-              isLive: isLive,
-              fetchedAt: DateTime.now(),
-              source: source,
-            );
-            _logFeed(feed);
-            return feed;
-          }
+          final feed = IpoFeed(
+            ipos: _sorted(ipos),
+            isLive: isLive,
+            fetchedAt: DateTime.now(),
+            source: source,
+          );
+          _logFeed(feed);
+          return feed;
+        } else {
+          lastError = 'HTTP status ${res.statusCode}';
         }
       } catch (e) {
+        lastError = e;
         debugPrint('[IPO_SERVICE] Error connecting to $uriStr: $e');
       }
     }
 
-    final fallbackFeed = IpoFeed(
-      ipos: _sorted(SampleData.ipos()),
-      isLive: false,
-      fetchedAt: DateTime.now(),
-      source: MarketDataSource.sampleFallback,
-    );
-    _logFeed(fallbackFeed);
-    return fallbackFeed;
+    if (allowSampleFallback) {
+      final fallbackFeed = IpoFeed(
+        ipos: _sorted(SampleData.ipos()),
+        isLive: false,
+        fetchedAt: DateTime.now(),
+        source: MarketDataSource.sampleFallback,
+      );
+      _logFeed(fallbackFeed);
+      return fallbackFeed;
+    }
+
+    throw Exception(
+        'Failed to load IPO data: ${lastError ?? (lastStatusCode != null ? "HTTP $lastStatusCode" : "unknown network error")}');
   }
 
   void _logFeed(IpoFeed feed) {

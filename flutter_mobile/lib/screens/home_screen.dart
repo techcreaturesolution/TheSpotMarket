@@ -101,13 +101,18 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: IndexedStack(index: _index, children: _tabs),
+        body: IndexedStack(
+          index: _index,
+          children: _tabs.map((tab) => RepaintBoundary(child: tab)).toList(),
+        ),
         floatingActionButton: Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: _LiquidGlassFab(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AiChatScreen()),
+          child: RepaintBoundary(
+            child: _LiquidGlassFab(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AiChatScreen()),
+              ),
             ),
           ),
         ),
@@ -115,17 +120,19 @@ class _HomeShellState extends State<HomeShell> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const BannerAdWidget(),
-            CurvedNotchedNavBar(
-              selectedIndex: _index,
-              onTap: (i) => setState(() => _index = i),
-              items: const [
-                NavItemData(icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard, label: 'Home'),
-                NavItemData(icon: Icons.rocket_launch_outlined, selectedIcon: Icons.rocket_launch, label: 'IPOs'),
-                NavItemData(icon: Icons.show_chart_outlined, selectedIcon: Icons.show_chart, label: 'Market'),
-                NavItemData(icon: Icons.public_outlined, selectedIcon: Icons.public, label: 'Global'),
-                NavItemData(icon: Icons.newspaper_outlined, selectedIcon: Icons.newspaper, label: 'News'),
-                NavItemData(icon: Icons.fact_check_outlined, selectedIcon: Icons.fact_check, label: 'Allotment'),
-              ],
+            RepaintBoundary(
+              child: CurvedNotchedNavBar(
+                selectedIndex: _index,
+                onTap: (i) => setState(() => _index = i),
+                items: const [
+                  NavItemData(icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard, label: 'Home'),
+                  NavItemData(icon: Icons.rocket_launch_outlined, selectedIcon: Icons.rocket_launch, label: 'IPOs'),
+                  NavItemData(icon: Icons.show_chart_outlined, selectedIcon: Icons.show_chart, label: 'Market'),
+                  NavItemData(icon: Icons.public_outlined, selectedIcon: Icons.public, label: 'Global'),
+                  NavItemData(icon: Icons.newspaper_outlined, selectedIcon: Icons.newspaper, label: 'News'),
+                  NavItemData(icon: Icons.fact_check_outlined, selectedIcon: Icons.fact_check, label: 'Allotment'),
+                ],
+              ),
             ),
           ],
         ),
@@ -149,7 +156,7 @@ class DashboardScreen extends StatelessWidget {
         scrolledUnderElevation: 0,
         flexibleSpace: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Container(
               color: const Color(0xFF040A07).withValues(alpha: 0.72),
               child: Container(
@@ -692,11 +699,12 @@ class _LiveIndexCardState extends State<_LiveIndexCard> {
     final c = gainColor(context, idx.isUp);
     final borderColor = _flashBorderColor ?? Colors.white.withValues(alpha: 0.14);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
           width: 158,
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
           decoration: BoxDecoration(
@@ -769,7 +777,8 @@ class _LiveIndexCardState extends State<_LiveIndexCard> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -794,13 +803,14 @@ class _AiBriefCard extends StatelessWidget {
           prev.isCfg != next.isCfg ||
           prev.canGen != next.canGen,
       builder: (ctx, data, __) {
-        return Container(
-          margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
+        return RepaintBoundary(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
@@ -914,7 +924,8 @@ class _AiBriefCard extends StatelessWidget {
               ),
             ),
           ),
-        );
+        ),
+      );
       },
     );
   }
