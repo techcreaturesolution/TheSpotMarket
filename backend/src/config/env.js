@@ -18,7 +18,7 @@ const env = {
   SMTP_SECURE: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
-  CONTACT_TO_EMAIL: process.env.CONTACT_TO_EMAIL || 'support@thespotmarket.com'
+  CONTACT_TO_EMAIL: process.env.CONTACT_TO_EMAIL || 'thespotmarket29@gmail.com'
 };
 
 module.exports = env;

@@ -13,6 +13,11 @@ if (typeof window !== 'undefined') {
     autoSleep: 60,
   });
 
+  // Optimize mobile performance: prevent ScrollTrigger recalculations when mobile address bar hides/shows
+  ScrollTrigger.config({
+    ignoreMobileResize: true,
+  });
+
   // Refresh ScrollTrigger once fonts are loaded to eliminate layout shifts & ensure pixel-perfect trigger offsets
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => {

@@ -40,6 +40,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/images/app_icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
+    <!-- Preload Critical Logo for instant FCP -->
+    <link rel="preload" as="image" href="/images/app_icon.png" type="image/png" />
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="TheSpotMarket" />
@@ -115,7 +118,7 @@
             },
             "contactPoint": {
               "@type": "ContactPoint",
-              "email": "support@thespotmarket.com",
+              "email": "thespotmarket29@gmail.com",
               "contactType": "customer support"
             }
           }
@@ -124,7 +127,16 @@
     </script>
   </head>
   <body class="bg-background text-text font-sans antialiased selection:bg-primary/20 selection:text-white">
-    <div id="root"></div>
+    <div id="root">
+      <!-- 0ms Zero-FOUC Instant Preloader -->
+      <div style="position:fixed;inset:0;background-color:#040A07;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:99999;font-family:system-ui,-apple-system,sans-serif;">
+        <div style="position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;inset:-8px;border-radius:24px;background:radial-gradient(circle,rgba(16,185,129,0.35) 0%,transparent 70%);"></div>
+          <img src="/images/app_icon.png" alt="TheSpotMarket" width="48" height="48" style="width:48px;height:48px;border-radius:14px;border:1px solid rgba(16,185,129,0.4);box-shadow:0 0 30px rgba(16,185,129,0.3);" />
+        </div>
+        <div style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:-0.5px;">TheSpot<span style="color:#10B981;">Market</span></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

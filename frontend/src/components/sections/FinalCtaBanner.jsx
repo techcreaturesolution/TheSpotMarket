@@ -99,6 +99,10 @@ export function FinalCtaBanner() {
                   <img
                     src="/images/app_icon.png"
                     alt="TheSpotMarket App"
+                    width="44"
+                    height="44"
+                    loading="lazy"
+                    decoding="async"
                     className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl object-cover border border-primary/40 shadow-sm shrink-0"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';

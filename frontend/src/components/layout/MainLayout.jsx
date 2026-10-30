@@ -8,6 +8,7 @@ import ScrollToTop from './ScrollToTop';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import FloatingSpotAiButton from './FloatingSpotAiButton';
+import InitialPreloader from './InitialPreloader';
 
 /**
  * Main application Layout shell.
@@ -62,6 +63,7 @@ export function MainLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-text antialiased selection:bg-primary/20 selection:text-white relative">
+      <InitialPreloader />
       <SEO />
       <SkipToContent />
       <ScrollToTop />
@@ -74,7 +76,19 @@ export function MainLayout() {
         tabIndex="-1"
         className="flex-1 focus:outline-none"
       >
-        <Outlet />
+        <React.Suspense
+          fallback={
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+              <div className="relative flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                <div className="absolute w-2 h-2 rounded-full bg-accent animate-pulse" />
+              </div>
+              <span className="text-xs font-mono text-muted/60 tracking-wider uppercase">Loading...</span>
+            </div>
+          }
+        >
+          <Outlet />
+        </React.Suspense>
       </main>
 
       <FloatingSpotAiButton />

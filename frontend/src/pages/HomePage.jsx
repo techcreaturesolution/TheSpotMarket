@@ -5,7 +5,6 @@ import {
   MarketTicker,
   StatsRow,
   FeaturesGrid,
-  IpoShowcaseSection,
   HowItWorksSection,
   WhySpotMarketSection,
   ScreenshotsSection,
@@ -56,6 +55,8 @@ export function HomePage() {
         },
         description:
           'Track live Mainline and SME IPO subscriptions, real-time Grey Market Premiums, verify allotment status by PAN, and ask SpotAI for DRHP prospectus breakdowns.',
+        downloadUrl: siteConfig.links.playStore,
+        installUrl: siteConfig.links.playStore,
       },
     ],
   };
@@ -91,9 +92,6 @@ export function HomePage() {
 
         {/* 4. 8-Card Features Grid (id="features", GSAP quickTo Lift & Stagger Reveal) */}
         <FeaturesGrid />
-
-        {/* 5. Live & Upcoming IPO Showcase (3 Sample Cards with Animated Progress Bars) */}
-        <IpoShowcaseSection />
 
         {/* 6. How It Works Section (id="how-it-works", 3 Steps + Scrubbed Connecting SVG Line) */}
         <HowItWorksSection />

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
  * Reusable Button component supporting primary, ghost, and glass variants.
  *
  * @param {Object} props
- * @param {'primary' | 'ghost' | 'glass'} [props.variant='primary']
+ * @param {'primary' | 'ghost' | 'glass' | 'outline'} [props.variant='primary']
  * @param {'sm' | 'md' | 'lg'} [props.size='md']
  * @param {string} [props.to] - If provided, renders as react-router-dom Link
  * @param {string} [props.href] - If provided, renders as <a> anchor
@@ -29,7 +29,7 @@ export function Button({
   ...props
 }) {
   const baseStyles =
-    'inline-flex items-center justify-center font-medium transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100';
+    'inline-flex items-center justify-center whitespace-nowrap font-medium transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100';
 
   const variants = {
     primary:
@@ -38,6 +38,8 @@ export function Button({
       'bg-transparent hover:bg-white/5 text-muted hover:text-text border border-transparent',
     glass:
       'bg-white/[0.04] hover:bg-white/[0.08] text-white border border-white/10 hover:border-white/20 backdrop-blur-md shadow-sm',
+    outline:
+      'bg-white/[0.03] hover:bg-white/[0.08] text-white border border-white/15 hover:border-primary/50 backdrop-blur-sm shadow-sm',
   };
 
   const sizes = {
@@ -74,13 +76,13 @@ export function Button({
           />
         </svg>
       ) : icon && iconPosition === 'left' ? (
-        <span className="shrink-0">{icon}</span>
+        <span className="shrink-0 inline-flex items-center">{icon}</span>
       ) : null}
 
-      <span>{children}</span>
+      <span className="inline-flex items-center gap-1.5">{children}</span>
 
       {!loading && icon && iconPosition === 'right' ? (
-        <span className="shrink-0">{icon}</span>
+        <span className="shrink-0 inline-flex items-center">{icon}</span>
       ) : null}
     </>
   );

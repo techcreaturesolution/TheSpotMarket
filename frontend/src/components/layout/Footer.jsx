@@ -38,7 +38,7 @@ export function Footer() {
       className="border-t border-white/10 bg-surface/70 backdrop-blur-md mt-auto relative z-10"
       aria-label="Footer"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 lg:py-18">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-14 pb-24 md:pt-18 md:pb-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
           {/* Column 1: Brand + Tagline + Socials (occupies 2 cols on lg) */}
           <div className="lg:col-span-2 space-y-5">
@@ -49,6 +49,10 @@ export function Footer() {
               <img
                 src="/images/app_icon.png"
                 alt="TheSpotMarket App Icon"
+                width="36"
+                height="36"
+                loading="lazy"
+                decoding="async"
                 className="h-9 w-9 rounded-xl object-cover border border-primary/40 shadow-sm transition-transform duration-200 group-hover:scale-105"
               />
               <span className="font-extrabold text-xl tracking-heading text-white">
@@ -194,16 +198,32 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-subtle">
-          <p className="order-2 md:order-1 text-center md:text-left">
-            © {new Date().getFullYear()} {siteConfig.legalName}. All rights reserved.
-          </p>
+        {/* Bottom Section */}
+        <div className="mt-12 pt-8 border-t border-white/5 space-y-6">
+          {/* Mandatory Regulatory Disclaimer Banner */}
+          <div className="flex justify-center">
+            <div className="w-full max-w-3xl flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl bg-bear/[0.08] border border-bear/20 text-red-300/90 text-xs text-center leading-relaxed">
+              <ShieldAlert className="h-4 w-4 text-bear shrink-0" />
+              <span>Not SEBI registered investment advice. Strictly for educational & tracking purposes.</span>
+            </div>
+          </div>
 
-          {/* Mandatory Regulatory Disclaimer */}
-          <div className="order-1 md:order-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bear/10 border border-bear/20 text-red-300/90 text-center">
-            <ShieldAlert className="h-4 w-4 text-bear shrink-0" />
-            <span>Not SEBI registered investment advice. Strictly for educational & tracking purposes.</span>
+          {/* Copyright & Developer Credits Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-subtle md:pr-36">
+            <p className="text-center sm:text-left">
+              © {new Date().getFullYear()} {siteConfig.legalName}. All rights reserved.
+            </p>
+            <p className="text-center sm:text-right text-muted whitespace-nowrap">
+              Designed & Developed by{' '}
+              <a
+                href="https://techcreaturesolution.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-accent font-semibold underline underline-offset-4 decoration-accent/40 hover:decoration-accent transition-colors"
+              >
+                Tech Creature Solution
+              </a>
+            </p>
           </div>
         </div>
       </div>

@@ -248,7 +248,7 @@ export function TermsPage() {
           <div className="p-4 rounded-xl bg-surface-2 border border-white/10 text-xs text-muted space-y-1 font-mono">
             <p className="text-white font-bold">{siteConfig.legalName}</p>
             <p>Attn: Legal & Compliance Department</p>
-            <p>Email: support@thespotmarket.com</p>
+            <p>Email: {siteConfig.contactEmail}</p>
             <p>Address: {siteConfig.address}</p>
           </div>
         </section>

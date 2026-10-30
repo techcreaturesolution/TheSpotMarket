@@ -176,24 +176,29 @@ export function SpotAiSection() {
             </div>
 
             {/* CTA */}
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3.5 pt-1">
               <Button
+                href={siteConfig.links.playStore}
                 variant="primary"
-                size="lg"
-                className="shadow-glow group"
-                onClick={() => alert('SpotAI is built directly inside TheSpotMarket app! Download coming soon.')}
+                size="md"
+                className="font-semibold shadow-btn-glow group"
+                icon={
+                  <Sparkles className="w-4 h-4 text-emerald-100 group-hover:rotate-12 transition-transform duration-300" />
+                }
               >
-                <Sparkles className="w-4 h-4 mr-2 text-accent" />
                 Try SpotAI in App
               </Button>
               <Button
                 to="/about"
                 variant="outline"
-                size="lg"
-                className="border-surface-border text-text-primary hover:border-primary/40"
+                size="md"
+                className="font-medium group"
+                icon={
+                  <ArrowRight className="w-4 h-4 text-muted group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
+                }
+                iconPosition="right"
               >
                 Learn How SpotAI Works
-                <ArrowRight className="w-4 h-4 ml-1.5 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
           </div>

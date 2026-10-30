@@ -23,7 +23,7 @@ function isSmtpConfigured() {
 async function sendContactEmail({ name, email, subject, message, clientIp }) {
   if (!isSmtpConfigured()) {
     const error = new Error(
-      'Email delivery service is currently unconfigured on this server. Please write to support@thespotmarket.com directly.'
+      'Email delivery service is currently unconfigured on this server. Please write to thespotmarket29@gmail.com directly.'
     );
     error.code = 'SMTP_NOT_CONFIGURED';
     error.status = 503;
@@ -34,7 +34,7 @@ async function sendContactEmail({ name, email, subject, message, clientIp }) {
   try {
     nodemailer = require('nodemailer');
   } catch (err) {
-    const error = new Error('Nodemailer library is not available. Please write to support@thespotmarket.com directly.');
+    const error = new Error('Nodemailer library is not available. Please write to thespotmarket29@gmail.com directly.');
     error.code = 'SMTP_MODULE_MISSING';
     error.status = 503;
     throw error;

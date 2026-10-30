@@ -181,6 +181,8 @@ export function Navbar() {
           <img
             src="/images/app_icon.png"
             alt="TheSpotMarket App Icon"
+            width="40"
+            height="40"
             className="h-10 w-10 rounded-xl object-cover border border-primary/40 shadow-sm transition-transform duration-200 group-hover:scale-105"
             onError={(e) => {
               // Fallback if image fails to load
@@ -284,6 +286,8 @@ export function Navbar() {
               <img
                 src="/images/app_icon.png"
                 alt="Logo"
+                width="32"
+                height="32"
                 className="h-8 w-8 rounded-lg object-cover border border-primary/30"
               />
               <span className="font-extrabold text-lg text-white">

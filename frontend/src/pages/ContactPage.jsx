@@ -22,6 +22,8 @@ import {
   ShieldCheck,
   RotateCcw,
   Sparkles,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { Container } from '@/components/ui/Container';
 import { SectionHeading } from '@/components/ui/SectionHeading';
@@ -76,10 +78,15 @@ export function ContactPage() {
   const [serverMessage, setServerMessage] = useState('');
   const [isServiceUnavailable, setIsServiceUnavailable] = useState(false);
 
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(contactSchema),
@@ -91,6 +98,23 @@ export function ContactPage() {
       hp: '',
     },
   });
+
+  const currentSubject = watch('subject') || 'General Inquiry';
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -158,7 +182,7 @@ export function ContactPage() {
         setIsServiceUnavailable(true);
         setServerMessage(
           data.message ||
-            'Contact email delivery is currently unconfigured or unavailable. Please write directly to support@thespotmarket.com.'
+            'Contact email delivery is currently unconfigured or unavailable. Please write directly to thespotmarket29@gmail.com.'
         );
       } else if (response.status === 429) {
         // Rate limit reached
@@ -546,30 +570,91 @@ export function ContactPage() {
                       </div>
                     </div>
 
-                    {/* Subject Select */}
-                    <div className="space-y-1.5">
+                    {/* Subject Select (Theme-Styled Custom Dropdown) */}
+                    <div className="space-y-1.5 relative" ref={dropdownRef}>
                       <label
-                        htmlFor="contact_subject"
+                        htmlFor="contact_subject_btn"
                         className="block text-xs font-mono font-medium text-white/90 uppercase tracking-wider"
                       >
                         Inquiry Topic <span className="text-accent">*</span>
                       </label>
-                      <select
-                        id="contact_subject"
+
+                      {/* Hidden registered input for form submission & validation */}
+                      <input type="hidden" {...register('subject')} value={currentSubject} />
+
+                      {/* Theme-Styled Trigger Button */}
+                      <button
+                        id="contact_subject_btn"
+                        type="button"
                         disabled={isSubmitting}
-                        {...register('subject')}
-                        className={`w-full px-4 py-3 rounded-xl bg-surface-2 border text-white text-sm focus:outline-none transition-all duration-200 ${
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        aria-haspopup="listbox"
+                        aria-expanded={isDropdownOpen}
+                        className={`w-full px-4 py-3 rounded-xl bg-surface-2 border text-sm flex items-center justify-between text-left transition-all duration-200 focus:outline-none ${
                           errors.subject
                             ? 'border-red-500/80 focus:border-red-400'
-                            : 'border-white/10 hover:border-white/20 focus:border-primary focus:ring-1 focus:ring-primary'
+                            : isDropdownOpen
+                            ? 'border-primary ring-1 ring-primary shadow-[0_0_20px_rgba(16,185,129,0.25)] text-white'
+                            : 'border-white/10 hover:border-white/20 text-white focus:border-primary focus:ring-1 focus:ring-primary'
                         }`}
                       >
-                        {SUBJECT_OPTIONS.map((sub, idx) => (
-                          <option key={idx} value={sub} className="bg-surface text-white">
-                            {sub}
-                          </option>
-                        ))}
-                      </select>
+                        <span className="font-medium text-white flex items-center gap-2.5">
+                          <span className="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                          {currentSubject}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-accent transition-transform duration-200 ${
+                            isDropdownOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {/* Theme-Styled Options Menu */}
+                      {isDropdownOpen && (
+                        <div
+                          role="listbox"
+                          tabIndex={-1}
+                          className="absolute left-0 right-0 top-full mt-2 z-50 p-1.5 rounded-xl bg-[#06120B]/95 backdrop-blur-xl border border-primary/30 shadow-[0_15px_50px_rgba(0,0,0,0.95),0_0_30px_rgba(16,185,129,0.2)] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+                        >
+                          <div className="space-y-1">
+                            {SUBJECT_OPTIONS.map((sub, idx) => {
+                              const isSelected = currentSubject === sub;
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={isSelected}
+                                  onClick={() => {
+                                    setValue('subject', sub, { shouldValidate: true });
+                                    setIsDropdownOpen(false);
+                                  }}
+                                  className={`w-full px-3.5 py-2.5 rounded-lg text-sm text-left flex items-center justify-between transition-all duration-150 group ${
+                                    isSelected
+                                      ? 'bg-primary/25 text-white font-semibold border border-primary/40 shadow-sm'
+                                      : 'text-muted hover:text-white hover:bg-primary/15 hover:pl-4'
+                                  }`}
+                                >
+                                  <span className="flex items-center gap-2.5">
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                        isSelected
+                                          ? 'bg-accent shadow-[0_0_6px_rgba(16,185,129,0.8)]'
+                                          : 'bg-transparent group-hover:bg-accent/60'
+                                      }`}
+                                    />
+                                    {sub}
+                                  </span>
+                                  {isSelected && (
+                                    <Check className="w-4 h-4 text-accent animate-in fade-in" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {errors.subject && (
                         <p role="alert" className="text-xs text-red-400 mt-1">
                           {errors.subject.message}
